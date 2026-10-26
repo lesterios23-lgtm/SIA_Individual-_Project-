@@ -23,7 +23,7 @@ working is its own card so the payslip stays the statement it is.
             <div class="bg-dark-50 p-2 rounded-md w-14">
                 {% with resolved_company=employee.employee_work_info.company_id|default:company %}
                     <img
-                        src="{% if resolved_company.icon %}{{ resolved_company.icon.url }}{% else %}{% static 'images/ui/auth-logo.png' %}{% endif %}"
+                        src="{% if resolved_company.icon %}{{ resolved_company.icon.url }}{% else %}{% static 'images/ui/energy-cycle-icon.svg' %}{% endif %}"
                         alt="{% trans 'Company' %}"
                     >
                 {% endwith %}

@@ -1,6 +1,6 @@
 {
-    "name": "Horilla",
-    "short_name": "Horilla",
+    "name": "EC: Energy Cycle Human Capital",
+    "short_name": "EC Human Capital",
     "description": "Free and Open Source HR Software",
     "start_url": "/",
     "display": "standalone",
@@ -8,9 +8,9 @@
     "theme_color": "orangered",
     "icons": [
       {
-        "src": "/static/favicons/apple-touch-icon.png",
-        "sizes": "192x192",
-        "type": "image/png"
+        "src": "/static/images/ui/energy-cycle-icon.svg",
+        "sizes": "any",
+        "type": "image/svg+xml"
       }
     ]
   }

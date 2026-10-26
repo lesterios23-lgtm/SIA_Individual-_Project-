@@ -42,6 +42,8 @@ REDIS_URL = env("REDIS_URL", default=None)
 SITE_ID = 1
 
 THEME_APP = "horilla_theme"
+SYSTEM_NAME = "EC: Energy Cycle Human Capital"
+SYSTEM_SHORT_NAME = "EC Human Capital"
 
 INSTALLED_APPS = [
     # Default Django apps
@@ -343,6 +345,7 @@ TEMPLATES = [
                 "base.context_processors.horilla_version",
                 "base.context_processors.get_companies",
                 "base.context_processors.white_labelling_company",
+                "base.context_processors.system_branding",
                 "base.context_processors.doc_base_url",
                 "base.context_processors.resignation_request_enabled",
                 "base.context_processors.timerunner_enabled",

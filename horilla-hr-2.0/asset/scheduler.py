@@ -4,6 +4,7 @@ scheduler.py
 This module is used to register scheduled tasks
 """
 
+import logging
 from datetime import date, timedelta
 
 from django.urls import reverse
@@ -11,6 +12,8 @@ from django.utils.translation import gettext_noop
 
 from horilla.scheduling import register_job
 from notifications.signals import notify
+
+logger = logging.getLogger(__name__)
 
 
 def notify_expiring_assets():
@@ -105,6 +108,46 @@ def notify_expiring_documents():
                 document.is_active = False
 
 
+def notify_overdue_assignments():
+    """
+    Notify employees whose assigned asset is past its due date and not returned.
+    """
+    from asset.models import AssetAssignment
+    from horilla_auth.models import HorillaUser
+
+    today = date.today()
+    bot = HorillaUser.objects.filter(username="Horilla Bot").only("id").first()
+    if bot is None:
+        logger.error(
+            "Cannot notify about overdue asset assignments: Horilla Bot is missing."
+        )
+        return
+
+    overdue = (
+        AssetAssignment.objects.filter(
+            due_date__isnull=False,
+            due_date__lt=today,
+            return_date__isnull=True,
+        )
+        .select_related("asset_id", "assigned_to_employee_id__employee_user_id")
+    )
+    for assignment in overdue:
+        recipient = assignment.assigned_to_employee_id.employee_user_id
+        if recipient is None:
+            continue
+
+        notify.send(
+            bot,
+            recipient=recipient,
+            verb=gettext_noop("The asset '%(asset_name)s' is overdue for return"),
+            verb_params={"asset_name": str(assignment.asset_id.asset_name)},
+            redirect=reverse("asset-category-view"),
+            label="System",
+            icon="information",
+        )
+
+
 register_job(notify_expiring_assets, "interval", days=1)
 register_job(notify_expiring_documents, "interval", hours=4)
 register_job(mark_expired_assets, "interval", days=1)
+register_job(notify_overdue_assignments, "interval", days=1)

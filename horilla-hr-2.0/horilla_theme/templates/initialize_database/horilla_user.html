@@ -6,7 +6,7 @@
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Login - {{ white_label_company_name }} Dashboard</title>
+        <title>Login - {{ system_name }}</title>
         <link
             rel="apple-touch-icon"
             sizes="180x180"
@@ -83,7 +83,7 @@
             <main class="oh-auth">
                 <div class="oh-onboarding-card" style="max-height: 790px; max-width: 975px" id="ohAuthCard">
                     <div class="oh-onboarding-card__header">
-                        <span class="oh-onboarding-card__company-name">{% trans "Horilla HRMS" %}</span>
+                        <span class="oh-onboarding-card__company-name">{{ system_short_name }}</span>
                         <ul class="oh-onboarding-card__steps">
                             <li class="oh-onboarding-card__step oh-onboarding-card__step--active">
                                 <div class="oh-onboarding-card__count">1</div>
@@ -111,7 +111,7 @@
                         {% trans "Database Authentication" %}
                     </h1>
                     <p class="text-muted text-center">
-                        {% trans "Authenticate with your password to initialize the Horilla HRMS database." %}
+                        {% blocktrans with name=system_short_name %}Authenticate with your password to initialize the {{ name }} database.{% endblocktrans %}
                     </p>
                     <form hx-post="{% url 'initialize-database' %}" hx-target="#ohAuthCard" class="oh-form-group">
                         {% csrf_token %}
@@ -156,8 +156,8 @@
                     </form>
                 </div>
                 <img
-                    src="{% if white_label_company.icon %}{{ white_label_company.icon.url }}{% else %}{% static 'images/ui/auth-logo.png' %}{% endif %}"
-                    alt="{% trans 'Horilla' %}"
+                    src="{% if white_label_company.icon %}{{ white_label_company.icon.url }}{% else %}{% static 'images/ui/energy-cycle-wordmark.svg' %}{% endif %}"
+                    alt="{{ system_short_name }}"
                 >
             </main>
         </div>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 132" role="img" aria-labelledby="title">
+  <title id="title">EC: Energy Cycle Human Capital</title>
+  <defs>
+    <linearGradient id="cycle" x1="18" x2="110" y1="18" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#16A67A"/>
+      <stop offset="1" stop-color="#08765D"/>
+    </linearGradient>
+  </defs>
+  <circle cx="66" cy="66" r="60" fill="url(#cycle)"/>
+  <path d="M96.8 46.7A35 35 0 0 0 37 41.5l-5.3-5.3v21.2h21.2l-8.4-8.4a23 23 0 0 1 42.2 2.6l10.1-4.9Z" fill="#EAFBF4"/>
+  <path d="M35.2 85.3A35 35 0 0 0 95 90.5l5.3 5.3V74.6H79.1l8.4 8.4a23 23 0 0 1-42.2-2.6l-10.1 4.9Z" fill="#EAFBF4"/>
+  <path d="m70.9 35-22.1 34h14.8l-2.5 28 22.1-36H68.8L70.9 35Z" fill="#F8C547" stroke="#FFF8DE" stroke-linejoin="round" stroke-width="2"/>
+  <text x="148" y="61" fill="#123B34" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" letter-spacing="1.4">ENERGY CYCLE</text>
+  <text x="149" y="91" fill="#08765D" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600" letter-spacing="4">HUMAN CAPITAL</text>
+</svg>

@@ -126,7 +126,11 @@ class Company(HorillaModel):
     def company_icon_with_name(self):
         from django.templatetags.static import static
 
-        icon_url = self.icon.url if self.icon else static("images/ui/auth-logo.png")
+        icon_url = (
+            self.icon.url
+            if self.icon
+            else static("images/ui/energy-cycle-icon.svg")
+        )
         return format_html(
             '<img src="{}" style="width: 30px; border-radius: 100%; display:inline;" class="oh-profile__image" alt="" /> {}',
             icon_url,

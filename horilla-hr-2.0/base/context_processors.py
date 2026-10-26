@@ -228,6 +228,13 @@ def white_labelling_company(request):
         }
 
 
+def system_branding(request):
+    return {
+        "system_name": settings.SYSTEM_NAME,
+        "system_short_name": settings.SYSTEM_SHORT_NAME,
+    }
+
+
 def doc_base_url(request):
     """
     Base domain for in-app help/doc links. Templates build the full link as

@@ -50,7 +50,7 @@
     <div class="oh-payslip__header-left">
       {% with resolved_company=employee.employee_work_info.company_id|default:company %}
         <img
-          src="{% if resolved_company.icon %}{{ resolved_company.icon.url }}{% else %}{% static 'images/ui/auth-logo.png' %}{% endif %}"
+          src="{% if resolved_company.icon %}{{ resolved_company.icon.url }}{% else %}{% static 'images/ui/energy-cycle-icon.svg' %}{% endif %}"
           style="width: 50px"
         />
       {% endwith %}

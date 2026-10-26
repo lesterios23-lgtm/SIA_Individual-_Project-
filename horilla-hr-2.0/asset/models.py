@@ -529,6 +529,7 @@ class AssetAssignment(HorillaModel):
         verbose_name=_("Assigned By"),
     )
     return_date = models.DateField(null=True, blank=True, verbose_name=_("Return Date"))
+    due_date = models.DateField(null=True, blank=True, verbose_name=_("Due Date"))
     return_condition = models.TextField(
         null=True, blank=True, verbose_name=_("Return Condition")
     )

@@ -8,8 +8,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="{% static 'horilla_theme/assets/css/tailwind.css' %}" rel="stylesheet">
         <title>
-            {% blocktrans with company_name=white_label_company_name %}Login - {{ company_name }}
-                Dashboard{% endblocktrans %}
+            Login - {{ system_name }}
         </title>
         <link
             rel="apple-touch-icon"
@@ -28,6 +27,7 @@
             sizes="16x16"
             href="{% if white_label_company.icon %}{{white_label_company.icon.url}} {% else %}{% static 'favicons/favicon-16x16.png' %}{% endif %}"
         >
+        <link rel="icon" type="image/svg+xml" href="{% if white_label_company.icon %}{{ white_label_company.icon.url }}{% else %}{% static 'images/ui/energy-cycle-icon.svg' %}{% endif %}">
         <link
             rel="stylesheet"
             href="/static/horilla_theme/assets/css/global.css"
@@ -116,15 +116,14 @@
         <div class="h-screen w-full flex items-center justify-center">
             <div class="bg-white p-[50px] rounded-2xl [box-shadow:0px_0px_25px_#a1a1a1] w-[450px]">
                 <img
-                    src="{% if white_label_company.icon %}{{white_label_company.icon.url}}{% else %}{% static 'horilla_theme/assets/img/logo.svg' %}{% endif %}"
+                    src="{% if white_label_company.icon %}{{white_label_company.icon.url}}{% else %}{% static 'images/ui/energy-cycle-icon.svg' %}{% endif %}"
                     alt=""
                     class="m-auto mb-4"
                     width="80"
                 >
                 <h1 class="text-3xl font-bold mb-2 text-center">
                     {% trans "Welcome to" %}
-                    {{ white_label_company_name }}
-                    {% trans "HR" %}
+                    {{ system_short_name }}
                 </h1>
                 <p class="mb-5 text-center text-sm text-color-600">
                     {% trans "Please login to access the dashboard." %}

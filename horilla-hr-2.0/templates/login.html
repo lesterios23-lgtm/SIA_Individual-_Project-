@@ -6,7 +6,7 @@
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Login - {{ white_label_company_name }} Dashboard</title>
+        <title>Login - {{ system_name }}</title>
         <link
             rel="apple-touch-icon"
             sizes="180x180"
@@ -26,6 +26,7 @@
         >
         <link rel="stylesheet" href="{% static '/build/css/style.min.css' %}">
         <link rel="manifest" href="{% static 'build/manifest.json' %}">
+        <link rel="icon" type="image/svg+xml" href="{% if white_label_company.icon %}{{ white_label_company.icon.url }}{% else %}{% static 'images/ui/energy-cycle-icon.svg' %}{% endif %}">
     </head>
 
     <body>
@@ -144,7 +145,7 @@
                         alt="{{white_label_company_name}}"
                         style=" opacity:.90; 200px; height: 140px;"
                     {% else %}
-                        "{% static 'images/ui/auth-logo.png' %}" alt="{% trans 'Horilla' %}"
+                        "{% static 'images/ui/energy-cycle-wordmark.svg' %}" alt="{{ system_short_name }}"
                     {% endif %}"
                     >
                     {% if white_label_company %}
