@@ -1,0 +1,12 @@
+# Extra settings for running Horilla on an AWS EC2 server (demo setup).
+# Used together with docker-compose.yml (see COMPOSE_FILE in .env).
+services:
+  web:
+    environment:
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,${PUBLIC_HOST}
+      - CSRF_TRUSTED_ORIGINS=http://${PUBLIC_HOST}:8000
+      - DB_INIT_PASSWORD=${DB_INIT_PASSWORD}
+  scheduler:
+    environment:
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,${PUBLIC_HOST}
+      - DB_INIT_PASSWORD=${DB_INIT_PASSWORD}
