@@ -2,6 +2,12 @@
 # Used together with docker-compose.yml (see COMPOSE_FILE in .env).
 services:
   web:
+    # EC2 stop/start brings the Docker daemon back up, but a container with no
+    # restart policy stays dead until someone runs `docker compose up -d`.
+    # The scheduler already restarts itself (see docker-compose.yml); the web
+    # tier, database and cache did not, which meant every instance restart
+    # required a manual SSH session.
+    restart: unless-stopped
     environment:
       - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,${PUBLIC_HOST}
       - CSRF_TRUSTED_ORIGINS=http://${PUBLIC_HOST}:8000
@@ -12,3 +18,7 @@ services:
       - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,${PUBLIC_HOST}
       - DB_INIT_PASSWORD=${DB_INIT_PASSWORD}
       - TIME_ZONE=Asia/Manila
+  db:
+    restart: unless-stopped
+  redis:
+    restart: unless-stopped
