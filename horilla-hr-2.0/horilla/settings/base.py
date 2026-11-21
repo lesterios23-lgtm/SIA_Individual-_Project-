@@ -76,6 +76,9 @@ INSTALLED_APPS = [
     THEME_APP,
     "base",
     "employee",
+    # HR's sender-side integration outbox. It publishes through the
+    # Integration Gateway and never writes another system's database.
+    "limbus_integration",
     "recruitment",
     "leave",
     "pms",
@@ -455,6 +458,23 @@ TWO_FACTORS_AUTHENTICATION = False
 # When True, /ready/ returns 503 until run_scheduler has registered jobs.
 # Off by default so Docker CI (web without the scheduler service) still passes.
 HORILLA_REQUIRE_SCHEDULER = env.bool("HORILLA_REQUIRE_SCHEDULER", default=False)
+
+# ========================================
+# LIMBUS INTEGRATION GATEWAY (HR SENDER)
+# ========================================
+# The gateway base URL is the documented local/private development server by
+# default. Production must set LIMBUS_GATEWAY_URL and LIMBUS_HR_TOKEN in the
+# environment; the token is never committed or stored in the database.
+LIMBUS_GATEWAY_URL = env(
+    "LIMBUS_GATEWAY_URL", default="http://localhost:8088/api/v1/integration"
+)
+LIMBUS_HR_TOKEN = env("LIMBUS_HR_TOKEN", default="")
+LIMBUS_HTTP_TIMEOUT = env.float("LIMBUS_HTTP_TIMEOUT", default=15.0)
+LIMBUS_OUTBOX_MAX_ATTEMPTS = env.int("LIMBUS_OUTBOX_MAX_ATTEMPTS", default=5)
+LIMBUS_OUTBOX_BATCH_SIZE = env.int("LIMBUS_OUTBOX_BATCH_SIZE", default=50)
+# Set to False during a bulk import to keep every save out of the outbox;
+# run the limbus_sync_employees command afterwards to reconcile.
+LIMBUS_AUTO_PUBLISH = env.bool("LIMBUS_AUTO_PUBLISH", default=True)
 
 SIDEBARS = [
     "employee",
