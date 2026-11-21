@@ -110,7 +110,9 @@ def notify_expiring_documents():
 
 def notify_overdue_assignments():
     """
-    Notify employees whose assigned asset is past its due date and not returned.
+    Notify the borrower and the employee who assigned the asset when it is past
+    its due date and not returned. Runs daily, so the reminder repeats until
+    the asset is returned.
     """
     from asset.models import AssetAssignment
     from horilla_auth.models import HorillaUser
@@ -129,22 +131,38 @@ def notify_overdue_assignments():
             due_date__lt=today,
             return_date__isnull=True,
         )
-        .select_related("asset_id", "assigned_to_employee_id__employee_user_id")
+        .select_related(
+            "asset_id",
+            "assigned_to_employee_id__employee_user_id",
+            "assigned_by_employee_id__employee_user_id",
+        )
     )
     for assignment in overdue:
-        recipient = assignment.assigned_to_employee_id.employee_user_id
-        if recipient is None:
-            continue
+        recipients = []
+        for employee in (
+            assignment.assigned_to_employee_id,
+            assignment.assigned_by_employee_id,
+        ):
+            user = getattr(employee, "employee_user_id", None)
+            if user is not None and user not in recipients:
+                recipients.append(user)
 
-        notify.send(
-            bot,
-            recipient=recipient,
-            verb=gettext_noop("The asset '%(asset_name)s' is overdue for return"),
-            verb_params={"asset_name": str(assignment.asset_id.asset_name)},
-            redirect=reverse("asset-category-view"),
-            label="System",
-            icon="information",
-        )
+        days_late = (today - assignment.due_date).days
+        for recipient in recipients:
+            notify.send(
+                bot,
+                recipient=recipient,
+                verb=gettext_noop(
+                    "The asset '%(asset_name)s' is %(days)s day(s) overdue for return"
+                ),
+                verb_params={
+                    "asset_name": str(assignment.asset_id.asset_name),
+                    "days": str(days_late),
+                },
+                redirect=reverse("asset-request-allocation-view"),
+                label="System",
+                icon="information",
+            )
 
 
 register_job(notify_expiring_assets, "interval", days=1)

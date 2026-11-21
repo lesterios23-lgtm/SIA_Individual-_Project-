@@ -530,6 +530,16 @@ class AssetAssignment(HorillaModel):
     )
     return_date = models.DateField(null=True, blank=True, verbose_name=_("Return Date"))
     due_date = models.DateField(null=True, blank=True, verbose_name=_("Due Date"))
+    ASSIGNMENT_TYPES = [
+        ("Permanent", _("Permanent")),
+        ("Temporary Loan", _("Temporary Loan")),
+    ]
+    assignment_type = models.CharField(
+        max_length=20,
+        choices=ASSIGNMENT_TYPES,
+        default="Permanent",
+        verbose_name=_("Assignment Type"),
+    )
     return_condition = models.TextField(
         null=True, blank=True, verbose_name=_("Return Condition")
     )
@@ -564,6 +574,25 @@ class AssetAssignment(HorillaModel):
 
     def __str__(self):
         return f"{self.assigned_to_employee_id} --- {self.asset_id} --- {self.return_status}"
+
+    @property
+    def is_overdue(self):
+        """True when the asset is past its due date and has not been returned."""
+        return bool(
+            self.due_date
+            and not self.return_date
+            and self.due_date < timezone.now().date()
+        )
+
+    def due_date_col(self):
+        """
+        Custom column for the Asset Allocation list: due date with an
+        Overdue label.
+        """
+        return render_template(
+            path="cbv/request_and_allocation/due_date.html",
+            context={"instance": self},
+        )
 
     def asset_detail_view(self):
         """

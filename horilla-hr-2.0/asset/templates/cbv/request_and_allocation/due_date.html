@@ -1,0 +1,12 @@
+{% load i18n %}
+{% if instance.due_date %}
+    <div class="dateformat_changer" data-cell-index="202">
+        {{ instance.due_date }}
+        {% if instance.is_overdue %}
+            <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--danger"></span>
+            <span class="link-danger"> {% trans "Overdue" %} </span>
+        {% endif %}
+    </div>
+{% else %}
+    <div data-cell-index="202">-</div>
+{% endif %}

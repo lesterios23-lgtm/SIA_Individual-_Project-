@@ -190,6 +190,8 @@ class AssetAllocationList(AllocationList):
         ),
         (_("Asset"), "asset_id"),
         (_("Assigned Date"), "assigned_date"),
+        (_("Type"), "assignment_type"),
+        (_("Due Date"), "due_date_col"),
         (_("Return Date"), "return_status_col"),
         (_("Return Status"), "return_status"),
     ]
@@ -198,6 +200,8 @@ class AssetAllocationList(AllocationList):
         (_("Allocated User"), "assigned_to_employee_id__get_full_name"),
         (_("Asset"), "asset_id__asset_name"),
         (_("Assigned Date"), "assigned_date"),
+        (_("Type"), "assignment_type"),
+        (_("Due Date"), "due_date"),
         (_("Return Date"), "return_status_col"),
         (_("Return Status"), "return_status"),
     ]

@@ -364,6 +364,8 @@ class AssetAllocationForm(ModelForm):
         "asset_id": 12,
         "asset_item_id": 12,
         "assigned_by_employee_id": 12,
+        "assignment_type": 6,
+        "due_date": 6,
     }
 
     def __init__(self, *args, **kwargs):
@@ -423,6 +425,25 @@ class AssetAllocationForm(ModelForm):
                         )
                     }
                 )
+        assignment_type = cleaned_data.get("assignment_type")
+        due_date = cleaned_data.get("due_date")
+        if assignment_type == "Temporary Loan":
+            if not due_date:
+                raise ValidationError(
+                    {
+                        "due_date": _(
+                            "Due date is required for a temporary loan."
+                        )
+                    }
+                )
+            unchanged = self.instance.pk and due_date == self.instance.due_date
+            if due_date <= date.today() and not unchanged:
+                raise ValidationError(
+                    {"due_date": _("Due date must be after today.")}
+                )
+        else:
+            # A permanent assignment has no due date.
+            cleaned_data["due_date"] = None
         return cleaned_data
 
     class Meta:
@@ -447,6 +468,9 @@ class AssetAllocationForm(ModelForm):
             "is_active",
         ]
         widgets = {
+            "due_date": forms.DateInput(
+                attrs={"type": "date", "class": "oh-input w-100"}
+            ),
             "asset_id": forms.Select(attrs={"class": "oh-select oh-select-2 "}),
             "asset_item_id": forms.Select(attrs={"class": "oh-select oh-select-2 "}),
             "assigned_to_employee_id": forms.Select(
