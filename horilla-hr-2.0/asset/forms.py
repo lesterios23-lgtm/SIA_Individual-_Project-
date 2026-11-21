@@ -572,13 +572,23 @@ class AssetServiceRequestForm(ModelForm):
     one of their own active asset allocations.
     """
 
-    cols = {"issue_description": 12}
+    cols = {"fault_category": 6, "date_of_issue": 6, "issue_description": 12}
+
+    MIN_DESCRIPTION_LENGTH = 20
 
     class Meta:
         model = AssetServiceRequest
-        fields = ["assignment_id", "issue_description"]
+        fields = [
+            "assignment_id",
+            "fault_category",
+            "date_of_issue",
+            "issue_description",
+        ]
         widgets = {
             "assignment_id": forms.HiddenInput(),
+            "date_of_issue": forms.DateInput(
+                attrs={"type": "date", "class": "oh-input w-100"}
+            ),
             "issue_description": forms.Textarea(
                 attrs={
                     "class": "oh-input oh-input--textarea oh-input--block",
@@ -598,6 +608,15 @@ class AssetServiceRequestForm(ModelForm):
         self.fields["assignment_id"].queryset = AssetAssignment.objects.filter(
             assigned_to_employee_id=employee, return_date__isnull=True
         )
+        # The reporter must pick the fault category on purpose, so the
+        # default ("Other") is not pre-selected.
+        self.fields["fault_category"].choices = [
+            ("", "---------"),
+            *AssetServiceRequest.FAULT_CATEGORIES,
+        ]
+        self.fields["fault_category"].initial = ""
+        self.fields["fault_category"].required = True
+        self.fields["date_of_issue"].required = True
 
         assignment_id = None
         if self.data:
@@ -606,6 +625,21 @@ class AssetServiceRequestForm(ModelForm):
             assignment_id = request.GET.get("assignment_id")
         if assignment_id:
             self.fields["assignment_id"].initial = assignment_id
+
+    def clean_date_of_issue(self):
+        date_of_issue = self.cleaned_data.get("date_of_issue")
+        if date_of_issue and date_of_issue > date.today():
+            raise ValidationError(_("Date of issue cannot be in the future."))
+        return date_of_issue
+
+    def clean_issue_description(self):
+        description = (self.cleaned_data.get("issue_description") or "").strip()
+        if len(description) < self.MIN_DESCRIPTION_LENGTH:
+            raise ValidationError(
+                _("Please describe the problem in at least %(n)s characters.")
+                % {"n": self.MIN_DESCRIPTION_LENGTH}
+            )
+        return description
 
     def clean_assignment_id(self):
         assignment = self.cleaned_data.get("assignment_id")

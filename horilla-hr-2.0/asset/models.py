@@ -5,6 +5,8 @@ This module defines Django models to manage assets, their categories, assigning,
 within an Asset Management System.
 """
 
+import datetime
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
@@ -1007,6 +1009,22 @@ class AssetServiceRequest(HorillaModel):
         verbose_name=_("Requested By"),
     )
     request_date = models.DateField(auto_now_add=True)
+    FAULT_CATEGORIES = [
+        ("Hardware", _("Hardware")),
+        ("Software", _("Software")),
+        ("Network", _("Network")),
+        ("Battery/Power", _("Battery/Power")),
+        ("Other", _("Other")),
+    ]
+    fault_category = models.CharField(
+        max_length=20,
+        choices=FAULT_CATEGORIES,
+        default="Other",
+        verbose_name=_("Fault Category"),
+    )
+    date_of_issue = models.DateField(
+        default=datetime.date.today, verbose_name=_("Date of Issue")
+    )
     issue_description = models.TextField(max_length=255, verbose_name=_("Description"))
     status = models.CharField(max_length=30, choices=STATUS, default="Requested")
     resolved_by_employee_id = models.ForeignKey(

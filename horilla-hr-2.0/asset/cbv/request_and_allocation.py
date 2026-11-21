@@ -34,6 +34,7 @@ from asset.models import (
     AssetAssignment,
     AssetRequest,
     AssetServiceRequest,
+    AssetServiceRequestNote,
     ReturnImages,
 )
 from base.methods import filtersubordinates
@@ -329,6 +330,7 @@ class AssetServiceRequestList(HorillaListView):
             "requested_employee_id__get_avatar",
         ),
         (_("Asset"), "assignment_id__asset_id"),
+        (_("Fault Category"), "fault_category"),
         (_("Requested Date"), "request_date"),
         (_("Status"), "status_col"),
     ]
@@ -336,6 +338,7 @@ class AssetServiceRequestList(HorillaListView):
     sortby_mapping = [
         ("Requested By", "requested_employee_id__get_full_name"),
         ("Asset", "assignment_id__asset_id__asset_name"),
+        ("Fault Category", "fault_category"),
         ("Requested Date", "request_date"),
         ("Status", "status_col"),
     ]
@@ -910,12 +913,16 @@ class AssetServiceRequestDetailView(HorillaDetailedView):
         self.body = [
             (_(""), "status_edit_display", True),
             (_("Asset"), "assignment_id__asset_id"),
+            (_("Fault Category"), "fault_category"),
+            (_("Date of Issue"), "date_of_issue"),
             (_("Requested Date"), "request_date"),
             (_("Issue Description"), "issue_description"),
             (_("Notes"), "notes_display", True),
         ]
         self.cols = {
             "assignment_id__asset_id": 6,
+            "fault_category": 6,
+            "date_of_issue": 6,
             "status_edit_display": 12,
             "issue_description": 12,
             "notes_display": 12,
@@ -942,29 +949,54 @@ class AssetServiceRequestDetailView(HorillaDetailedView):
         if "status" in request.POST:
             new_status = request.POST.get("status")
             if new_status in dict(AssetServiceRequest.STATUS):
+                old_status = instance.status
                 instance.status = new_status
                 if new_status in ("Completed", "Rejected"):
                     instance.resolved_by_employee_id = request.user.employee_get
                     instance.resolved_date = timezone.now().date()
                 instance.save()
                 messages.success(request, _("Service request updated."))
-                if new_status in ("Completed", "Rejected"):
-                    verb = (
-                        gettext_noop("Your asset service request has been completed!")
-                        if new_status == "Completed"
-                        else gettext_noop("Your asset service request was rejected.")
+                if new_status != old_status:
+                    # Keep a record of every stage change in the notes log.
+                    AssetServiceRequestNote.objects.create(
+                        request_id=instance,
+                        employee_id=request.user.employee_get,
+                        note=f"Status changed from {old_status} to {new_status}.",
                     )
-                    notify.send(
-                        request.user.employee_get,
-                        recipient=instance.requested_employee_id.employee_user_id,
-                        verb=verb,
-                        redirect=reverse("asset-request-allocation-view"),
-                        icon=(
-                            "checkmark-circle-outline"
-                            if new_status == "Completed"
-                            else "close-circle-outline"
+                    status_messages = {
+                        "Requested": gettext_noop(
+                            "Your asset service request was moved back to Requested."
                         ),
-                    )
+                        "In Progress": gettext_noop(
+                            "Your asset service request is now in progress."
+                        ),
+                        "Completed": gettext_noop(
+                            "Your asset service request has been completed!"
+                        ),
+                        "Rejected": gettext_noop(
+                            "Your asset service request was rejected."
+                        ),
+                        "Returned": gettext_noop(
+                            "Your asset was returned after your service request."
+                        ),
+                    }
+                    recipient = instance.requested_employee_id.employee_user_id
+                    if recipient is not None:
+                        notify.send(
+                            request.user.employee_get,
+                            recipient=recipient,
+                            verb=status_messages[new_status],
+                            redirect=reverse("asset-request-allocation-view"),
+                            icon=(
+                                "checkmark-circle-outline"
+                                if new_status == "Completed"
+                                else (
+                                    "close-circle-outline"
+                                    if new_status == "Rejected"
+                                    else "build-outline"
+                                )
+                            ),
+                        )
         return self.get(request, *args, **kwargs)
 
 
