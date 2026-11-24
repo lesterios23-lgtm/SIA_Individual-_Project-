@@ -19,6 +19,7 @@ from django.utils.translation import gettext_lazy as _
 from base.horilla_company_manager import HorillaCompanyManager
 from base.models import Company
 from employee.models import Employee
+from horilla.horilla_middlewares import _thread_locals
 from horilla.models import HorillaModel, upload_path
 from horilla_views.cbv_methods import render_template
 
@@ -542,6 +543,23 @@ class AssetAssignment(HorillaModel):
         default="Permanent",
         verbose_name=_("Assignment Type"),
     )
+    ACCEPTANCE_STATUS = [
+        ("Pending", _("Pending")),
+        ("Accepted", _("Accepted")),
+        ("Rejected", _("Rejected")),
+    ]
+    acceptance_status = models.CharField(
+        max_length=20,
+        choices=ACCEPTANCE_STATUS,
+        default="Pending",
+        verbose_name=_("Acceptance"),
+    )
+    responded_at = models.DateTimeField(
+        null=True, blank=True, verbose_name=_("Responded On")
+    )
+    acceptance_note = models.TextField(
+        null=True, blank=True, verbose_name=_("Response Note")
+    )
     return_condition = models.TextField(
         null=True, blank=True, verbose_name=_("Return Condition")
     )
@@ -593,6 +611,34 @@ class AssetAssignment(HorillaModel):
         """
         return render_template(
             path="cbv/request_and_allocation/due_date.html",
+            context={"instance": self},
+        )
+
+    def acceptance_col(self):
+        """
+        Custom column: Pending / Accepted / Rejected badge.
+        """
+        return render_template(
+            path="cbv/request_and_allocation/acceptance_status.html",
+            context={"instance": self},
+        )
+
+    def acceptance_buttons(self):
+        """
+        Accept / Reject buttons. Only returned to the employee the asset was
+        assigned to, and only while the acceptance is still Pending.
+        """
+        request = getattr(_thread_locals, "request", None)
+        user = getattr(request, "user", None)
+        employee = getattr(user, "employee_get", None)
+        if (
+            self.acceptance_status != "Pending"
+            or employee is None
+            or employee != self.assigned_to_employee_id
+        ):
+            return ""
+        return render_template(
+            path="cbv/request_and_allocation/acceptance_buttons.html",
             context={"instance": self},
         )
 

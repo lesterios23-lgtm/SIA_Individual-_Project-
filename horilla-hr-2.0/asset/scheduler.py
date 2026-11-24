@@ -165,7 +165,76 @@ def notify_overdue_assignments():
             )
 
 
+PENDING_ACCEPTANCE_DAYS = 3
+
+
+def notify_pending_acceptances():
+    """
+    Remind the employee and the assigner when an assigned asset has been
+    waiting for acceptance for more than PENDING_ACCEPTANCE_DAYS days. Runs
+    daily, so the reminder repeats until the employee responds.
+    """
+    from asset.models import AssetAssignment
+    from horilla_auth.models import HorillaUser
+
+    today = date.today()
+    bot = HorillaUser.objects.filter(username="Horilla Bot").only("id").first()
+    if bot is None:
+        logger.error(
+            "Cannot notify about pending asset acceptances: Horilla Bot is missing."
+        )
+        return
+
+    pending = AssetAssignment.objects.filter(
+        acceptance_status="Pending",
+        return_date__isnull=True,
+        assigned_date__lt=today - timedelta(days=PENDING_ACCEPTANCE_DAYS),
+    ).select_related(
+        "asset_id",
+        "assigned_to_employee_id__employee_user_id",
+        "assigned_by_employee_id__employee_user_id",
+    )
+    for assignment in pending:
+        days = (today - assignment.assigned_date).days
+        asset_name = str(assignment.asset_id.asset_name)
+        employee_user = getattr(
+            assignment.assigned_to_employee_id, "employee_user_id", None
+        )
+        assigner_user = getattr(
+            assignment.assigned_by_employee_id, "employee_user_id", None
+        )
+        if employee_user is not None:
+            notify.send(
+                bot,
+                recipient=employee_user,
+                verb=gettext_noop(
+                    "Please accept or reject the asset '%(asset_name)s' assigned to you %(days)s day(s) ago"
+                ),
+                verb_params={"asset_name": asset_name, "days": str(days)},
+                redirect=reverse("asset-request-allocation-view"),
+                label="System",
+                icon="information",
+            )
+        if assigner_user is not None and assigner_user != employee_user:
+            notify.send(
+                bot,
+                recipient=assigner_user,
+                verb=gettext_noop(
+                    "%(employee)s has not responded to the asset '%(asset_name)s' for %(days)s day(s)"
+                ),
+                verb_params={
+                    "employee": str(assignment.assigned_to_employee_id),
+                    "asset_name": asset_name,
+                    "days": str(days),
+                },
+                redirect=reverse("asset-request-allocation-view"),
+                label="System",
+                icon="information",
+            )
+
+
 register_job(notify_expiring_assets, "interval", days=1)
 register_job(notify_expiring_documents, "interval", hours=4)
 register_job(mark_expired_assets, "interval", days=1)
 register_job(notify_overdue_assignments, "interval", days=1)
+register_job(notify_pending_acceptances, "interval", days=1)

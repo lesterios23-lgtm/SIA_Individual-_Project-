@@ -477,6 +477,11 @@ urlpatterns = [
         name="asset-service-request-creation",
     ),
     path(
+        "asset-acceptance/<int:pk>/",
+        request_and_allocation.AssetAcceptanceFormView.as_view(),
+        name="asset-acceptance",
+    ),
+    path(
         "list-asset-service-request/",
         request_and_allocation.AssetServiceRequestList.as_view(),
         name="list-asset-service-request",

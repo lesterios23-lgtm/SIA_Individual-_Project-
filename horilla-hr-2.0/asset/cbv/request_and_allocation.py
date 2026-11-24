@@ -24,6 +24,7 @@ from asset.filters import (
     CustomAssetFilter,
 )
 from asset.forms import (
+    AssetAcceptanceForm,
     AssetAllocationForm,
     AssetReassignForm,
     AssetRequestForm,
@@ -57,6 +58,26 @@ from horilla_views.generic.cbv.views import (
     TemplateView,
 )
 from notifications.signals import notify
+
+
+def notify_pending_acceptance(assignment, sender):
+    """
+    Tell the employee an asset was assigned to that they need to accept or
+    reject it.
+    """
+    recipient = assignment.assigned_to_employee_id.employee_user_id
+    if recipient is None:
+        return
+    notify.send(
+        sender,
+        recipient=recipient,
+        verb=gettext_noop(
+            "The asset '%(asset_name)s' was assigned to you. Please accept or reject it."
+        ),
+        verb_params={"asset_name": str(assignment.asset_id.asset_name)},
+        redirect=reverse("asset-request-allocation-view"),
+        icon="bag-check",
+    )
 
 
 @method_decorator(login_required, name="dispatch")
@@ -99,6 +120,8 @@ class AllocationList(HorillaListView):
         (_("Asset"), "asset_id", "get_avatar"),
         (_("Category"), "asset_id__asset_category_id"),
         (_("Warranty Expiry Date"), "asset_id__expiry_date"),
+        (_("Due Date"), "due_date_col"),
+        (_("Acceptance"), "acceptance_col"),
     ]
 
     header_attrs = {
@@ -111,6 +134,8 @@ class AllocationList(HorillaListView):
     sortby_mapping = [
         (_("Category"), "asset_id__asset_category_id__asset_category_name"),
         (_("Warranty Expiry Date"), "asset_id__expiry_date"),
+        (_("Due Date"), "due_date"),
+        (_("Acceptance"), "acceptance_status"),
     ]
 
     action_method = "asset_action"
@@ -193,6 +218,7 @@ class AssetAllocationList(AllocationList):
         (_("Assigned Date"), "assigned_date"),
         (_("Type"), "assignment_type"),
         (_("Due Date"), "due_date_col"),
+        (_("Acceptance"), "acceptance_col"),
         (_("Return Date"), "return_status_col"),
         (_("Return Status"), "return_status"),
     ]
@@ -203,6 +229,7 @@ class AssetAllocationList(AllocationList):
         (_("Assigned Date"), "assigned_date"),
         (_("Type"), "assignment_type"),
         (_("Due Date"), "due_date"),
+        (_("Acceptance"), "acceptance_status"),
         (_("Return Date"), "return_status_col"),
         (_("Return Status"), "return_status"),
     ]
@@ -762,6 +789,7 @@ class AssetDetailView(HorillaDetailedView):
             (_("Batch No"), "asset_id__asset_lot_number_id"),
             (_("Assigned Date"), "assigned_date"),
             (_("Status"), "asset_detail_status"),
+            (_("Acceptance"), "acceptance_col"),
             (_("Assigned by"), "assigned_by_employee_id"),
             (_("Description"), "asset_id__asset_description"),
             # ("Category","asset_id__asset_category_id")
@@ -839,10 +867,14 @@ class AssetAllocationDetailView(HorillaDetailedView):
             (_("Return Date"), "return_date"),
             (_("Asset"), "asset_id"),
             (_("Status"), "detail_status"),
+            (_("Acceptance"), "acceptance_col"),
+            (_("Responded On"), "responded_at"),
+            (_("Response Note"), "acceptance_note"),
             (_("Return Description"), "return_condition"),
         ]
 
         self.cols = {
+            "acceptance_note": 12,
             "return_condition": 12,
         }
 
@@ -1093,6 +1125,81 @@ class AssetServiceRequestCreateForm(HorillaFormView):
 
 
 @method_decorator(login_required, name="dispatch")
+class AssetAcceptanceFormView(HorillaFormView):
+    """
+    Accept or reject an asset that was assigned to the logged-in employee.
+    """
+
+    model = AssetAssignment
+    form_class = AssetAcceptanceForm
+    template_name = "cbv/request_and_allocation/forms/acceptance_form.html"
+    new_display_title = _("Asset Acceptance")
+
+    def dispatch(self, request, *args, **kwargs):
+        assignment = AssetAssignment.objects.filter(pk=kwargs.get("pk")).first()
+        if assignment is None:
+            messages.error(request, _("Asset allocation not found."))
+            return HorillaRedirect(request)
+        if assignment.assigned_to_employee_id != request.user.employee_get:
+            messages.error(request, _("You don't have permission."))
+            return HorillaRedirect(request)
+        if assignment.acceptance_status != "Pending":
+            messages.info(request, _("This asset has already been responded to."))
+            return HorillaRedirect(request)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        assignment = AssetAssignment.objects.filter(pk=self.kwargs.get("pk")).first()
+        decision = self.request.POST.get("decision") or self.request.GET.get(
+            "decision"
+        )
+        if assignment:
+            title = (
+                _("Reject Asset - %(asset)s")
+                if decision == "Rejected"
+                else _("Accept Asset - %(asset)s")
+            )
+            self.new_display_title = title % {"asset": assignment.asset_id}
+        return super().get_context_data(**kwargs)
+
+    def form_valid(self, form: AssetAcceptanceForm) -> HttpResponse:
+        if form.is_valid():
+            instance = form.save()
+            accepted = instance.acceptance_status == "Accepted"
+            messages.success(
+                self.request,
+                (
+                    _("Asset accepted.")
+                    if accepted
+                    else _("Asset rejected. The assigner has been notified.")
+                ),
+            )
+            recipient = instance.assigned_by_employee_id.employee_user_id
+            if recipient is not None:
+                notify.send(
+                    instance.assigned_to_employee_id,
+                    recipient=recipient,
+                    verb=(
+                        gettext_noop(
+                            "%(employee)s accepted the asset '%(asset_name)s'."
+                        )
+                        if accepted
+                        else gettext_noop(
+                            "%(employee)s rejected the asset '%(asset_name)s'."
+                        )
+                    ),
+                    verb_params={
+                        "employee": str(instance.assigned_to_employee_id),
+                        "asset_name": str(instance.asset_id.asset_name),
+                    },
+                    redirect=reverse("asset-request-allocation-view"),
+                    icon="checkmark-circle-outline" if accepted else "close-circle-outline",
+                )
+            return self.HttpResponse()
+        return super().form_valid(form)
+
+
+@method_decorator(login_required, name="dispatch")
 @method_decorator(permission_required(perm="asset.add_asset"), name="dispatch")
 class AssetAllocationFormView(HorillaFormView):
     """
@@ -1124,6 +1231,7 @@ class AssetAllocationFormView(HorillaFormView):
         """
         if form.is_valid():
             message = _("Asset allocated Successfully")
+            is_new = form.instance.pk is None
             instance = form.save()
             asset = instance.asset_id
             if instance.asset_item_id_id:
@@ -1146,6 +1254,8 @@ class AssetAllocationFormView(HorillaFormView):
                     attachment.save()
                     attachments.append(attachment)
                 form.instance.assign_images.add(*attachments)
+            if is_new:
+                notify_pending_acceptance(instance, self.request.user.employee_get)
             messages.success(self.request, message)
             return self.HttpResponse()
         return super().form_valid(form)
@@ -1215,6 +1325,7 @@ class AssetApproveFormView(HorillaFormView):
                 asset.save()
             asset_request.asset_request_status = "Approved"
             asset_request.save()
+            notify_pending_acceptance(instance, self.request.user.employee_get)
             request = getattr(_thread_locals, "request", None)
             files = request.FILES.getlist("assign_images")
             attachments = []

@@ -1,0 +1,13 @@
+{% load i18n %}
+<div data-cell-index="204">
+    {% if instance.acceptance_status == "Accepted" %}
+        <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--success"></span>
+        <span class="link-success"> {% trans "Accepted" %} </span>
+    {% elif instance.acceptance_status == "Rejected" %}
+        <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--danger"></span>
+        <span class="link-danger"> {% trans "Rejected" %} </span>
+    {% else %}
+        <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--warning"></span>
+        <span class="link-warning"> {% trans "Pending" %} </span>
+    {% endif %}
+</div>

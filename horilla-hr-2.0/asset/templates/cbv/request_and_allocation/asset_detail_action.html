@@ -1,7 +1,10 @@
 {% load i18n %}
 <div class="oh-modal__button-container text-center w-100">
     <div class="oh-btn-group">
-        {% if perms.asset.change_assetassignment %}
+        {% with acceptance_html=instance.acceptance_buttons %}
+        {% if acceptance_html %}
+            {{ acceptance_html|safe }}
+        {% elif perms.asset.change_assetassignment %}
             <button
                 href="#"
                 class="oh-btn oh-btn--secondary w-100 h-8"
@@ -37,5 +40,6 @@
                 </button>
             {% endif %}
         {% endif %}
+        {% endwith %}
     </div>
 </div>

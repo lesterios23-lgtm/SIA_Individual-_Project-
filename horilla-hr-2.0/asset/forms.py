@@ -12,6 +12,7 @@ from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from asset.models import (
@@ -466,6 +467,9 @@ class AssetAllocationForm(ModelForm):
             "return_images",
             "assign_images",
             "is_active",
+            "acceptance_status",
+            "responded_at",
+            "acceptance_note",
         ]
         widgets = {
             "due_date": forms.DateInput(
@@ -482,6 +486,69 @@ class AssetAllocationForm(ModelForm):
                 },
             ),
         }
+
+
+class AssetAcceptanceForm(ModelForm):
+    """
+    Lets the employee an asset was assigned to accept or reject it. A reason
+    is required when rejecting.
+    """
+
+    cols = {"acceptance_note": 12}
+
+    decision = forms.ChoiceField(
+        choices=[("Accepted", _("Accepted")), ("Rejected", _("Rejected"))],
+        widget=forms.HiddenInput(),
+    )
+
+    class Meta:
+        model = AssetAssignment
+        fields = ["acceptance_note"]
+        widgets = {
+            "acceptance_note": forms.Textarea(
+                attrs={
+                    "class": "oh-input oh-input--textarea oh-input--block",
+                    "rows": 3,
+                    "cols": 40,
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        request = getattr(_thread_locals, "request", None)
+        super().__init__(*args, **kwargs)
+        decision = None
+        if self.data:
+            decision = self.data.get("decision")
+        elif request is not None:
+            decision = request.GET.get("decision")
+        if decision in ("Accepted", "Rejected"):
+            self.fields["decision"].initial = decision
+        if decision == "Rejected":
+            self.fields["acceptance_note"].label = _("Reason for rejection")
+        else:
+            self.fields["acceptance_note"].label = _("Note (optional)")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.instance.acceptance_status != "Pending":
+            raise ValidationError(_("This asset has already been responded to."))
+        note = (cleaned_data.get("acceptance_note") or "").strip()
+        cleaned_data["acceptance_note"] = note
+        if cleaned_data.get("decision") == "Rejected" and not note:
+            self.add_error(
+                "acceptance_note", _("Please give a reason for rejecting the asset.")
+            )
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.acceptance_status = self.cleaned_data["decision"]
+        instance.responded_at = timezone.now()
+        instance.acceptance_note = self.cleaned_data.get("acceptance_note") or None
+        if commit:
+            instance.save()
+        return instance
 
 
 class AssetReturnForm(ModelForm):

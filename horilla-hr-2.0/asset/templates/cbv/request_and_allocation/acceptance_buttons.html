@@ -1,0 +1,25 @@
+{% load i18n %}
+<div class="flex items-center justify-center gap-2" onclick="event.stopPropagation();">
+    <button
+        class="oh-btn oh-btn--success"
+        role="button"
+        data-toggle="oh-modal-toggle"
+        data-target="#genericModal"
+        hx-get="{% url 'asset-acceptance' pk=instance.id %}?decision=Accepted"
+        hx-target="#genericModalBody"
+    >
+        <ion-icon name="checkmark-outline"></ion-icon>
+        {% trans "Accept" %}
+    </button>
+    <button
+        class="oh-btn oh-btn--danger"
+        role="button"
+        data-toggle="oh-modal-toggle"
+        data-target="#genericModal"
+        hx-get="{% url 'asset-acceptance' pk=instance.id %}?decision=Rejected"
+        hx-target="#genericModalBody"
+    >
+        <ion-icon name="close-outline"></ion-icon>
+        {% trans "Reject" %}
+    </button>
+</div>
