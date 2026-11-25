@@ -63,7 +63,20 @@ SUBMENUS = [
             "/asset/asset-history-single-view/",
         ],
     },
+    {
+        "menu": _("Software Licenses"),
+        "redirect": reverse("software-license-view"),
+        "accessibility": "asset.sidebar.license_accessibility",
+        "match_prefixes": ["/asset/software-license-"],
+    },
 ]
+
+
+def license_accessibility(request, submenu, user_perms, *args, **kwargs):
+    """
+    Software licenses sidebar accessibility method
+    """
+    return request.user.has_perm("asset.view_asset")
 
 
 def dashboard_accessibility(request, submenu, user_perms, *args, **kwargs):

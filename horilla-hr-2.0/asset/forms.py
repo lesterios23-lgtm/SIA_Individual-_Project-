@@ -25,6 +25,8 @@ from asset.models import (
     AssetReport,
     AssetRequest,
     AssetServiceRequest,
+    LicenseAllocation,
+    SoftwareLicense,
 )
 from base.forms import ModelForm
 from base.methods import reload_queryset
@@ -871,3 +873,120 @@ class AssetHistoryExportForm(forms.Form):
             "return_condition",
         ],
     )
+
+
+class SoftwareLicenseForm(ModelForm):
+    """
+    Create or update a SoftwareLicense record.
+    """
+
+    cols = {
+        "name": 6,
+        "vendor": 6,
+        "license_key": 6,
+        "total_seats": 6,
+        "purchase_date": 6,
+        "expiry_date": 6,
+        "cost": 6,
+        "renewal_owner": 6,
+        "notes": 12,
+    }
+
+    class Meta:
+        model = SoftwareLicense
+        fields = [
+            "name",
+            "vendor",
+            "license_key",
+            "total_seats",
+            "purchase_date",
+            "expiry_date",
+            "cost",
+            "renewal_owner",
+            "notes",
+        ]
+        widgets = {
+            "purchase_date": forms.DateInput(
+                attrs={"type": "date", "class": "oh-input w-100"}
+            ),
+            "expiry_date": forms.DateInput(
+                attrs={"type": "date", "class": "oh-input w-100"}
+            ),
+            "renewal_owner": forms.Select(
+                attrs={"class": "oh-select oh-select-2 w-100"}
+            ),
+            "notes": forms.Textarea(
+                attrs={
+                    "class": "oh-input oh-input--textarea oh-input--block",
+                    "rows": 3,
+                    "cols": 40,
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        reload_queryset(self.fields)
+        self.fields["renewal_owner"].queryset = Employee.objects.filter(is_active=True)
+
+    def clean_total_seats(self):
+        total_seats = self.cleaned_data.get("total_seats")
+        if total_seats is None or total_seats < 1:
+            raise ValidationError(_("Total seats must be at least 1."))
+        if self.instance.pk and total_seats < self.instance.seats_used:
+            raise ValidationError(
+                _(
+                    "Total seats cannot be less than currently allocated seats (%(used)s)."
+                )
+                % {"used": self.instance.seats_used}
+            )
+        return total_seats
+
+
+class LicenseAllocationForm(ModelForm):
+    """
+    Allocate a software license seat to an employee and/or an asset (device).
+    """
+
+    cols = {
+        "license": 12,
+        "employee": 6,
+        "asset": 6,
+        "allocated_date": 12,
+    }
+
+    class Meta:
+        model = LicenseAllocation
+        fields = ["license", "employee", "asset", "allocated_date"]
+        widgets = {
+            "license": forms.Select(attrs={"class": "oh-select oh-select-2 w-100"}),
+            "employee": forms.Select(attrs={"class": "oh-select oh-select-2 w-100"}),
+            "asset": forms.Select(attrs={"class": "oh-select oh-select-2 w-100"}),
+            "allocated_date": forms.DateInput(
+                attrs={"type": "date", "class": "oh-input w-100"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        reload_queryset(self.fields)
+        self.fields["employee"].queryset = Employee.objects.filter(is_active=True)
+        self.fields["asset"].queryset = Asset.objects.all()
+        if not self.instance.pk:
+            self.fields["allocated_date"].initial = date.today()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        license_obj = cleaned_data.get("license")
+        employee = cleaned_data.get("employee")
+        asset = cleaned_data.get("asset")
+        if not employee and not asset:
+            raise ValidationError(
+                _("Please select at least an employee or an asset/device.")
+            )
+        if license_obj and self.instance.pk is None and license_obj.seats_available <= 0:
+            raise ValidationError(
+                _("All %(total)s seat(s) for '%(name)s' are already allocated.")
+                % {"total": license_obj.total_seats, "name": license_obj.name}
+            )
+        return cleaned_data

@@ -21,6 +21,8 @@ from .models import (
     AssetLot,
     AssetReport,
     AssetRequest,
+    LicenseAllocation,
+    SoftwareLicense,
 )
 
 # Register your models here.
@@ -34,3 +36,5 @@ admin.site.register(AssetAssignment)
 admin.site.register(AssetLot)
 admin.site.register(AssetReport)
 admin.site.register(AssetDocuments)
+admin.site.register(SoftwareLicense)
+admin.site.register(LicenseAllocation)

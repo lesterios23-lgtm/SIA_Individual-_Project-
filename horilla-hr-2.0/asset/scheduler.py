@@ -233,8 +233,68 @@ def notify_pending_acceptances():
             )
 
 
+LICENSE_EXPIRY_NOTIFY_DAYS = (60, 30, 7, 0)
+
+
+def notify_expiring_licenses():
+    """
+    Notify the renewal_owner 60, 30, and 7 days before a software license
+    expires, and on the expiry date itself. Runs daily.
+    """
+    from asset.models import SoftwareLicense
+    from horilla_auth.models import HorillaUser
+
+    today = date.today()
+    bot = HorillaUser.objects.filter(username="Horilla Bot").only("id").first()
+    if bot is None:
+        logger.error(
+            "Cannot notify about expiring software licenses: Horilla Bot is missing."
+        )
+        return
+
+    licenses = SoftwareLicense.objects.filter(
+        expiry_date__isnull=False,
+        renewal_owner__isnull=False,
+    ).select_related("renewal_owner__employee_user_id")
+
+    for license_obj in licenses:
+        days_left = (license_obj.expiry_date - today).days
+        if days_left not in LICENSE_EXPIRY_NOTIFY_DAYS:
+            continue
+        owner_user = getattr(license_obj.renewal_owner, "employee_user_id", None)
+        if owner_user is None:
+            continue
+        if days_left == 0:
+            verb = gettext_noop(
+                "Software license '%(name)s' (%(vendor)s) expires today."
+            )
+            verb_params = {
+                "name": str(license_obj.name),
+                "vendor": str(license_obj.vendor),
+            }
+        else:
+            verb = gettext_noop(
+                "Software license '%(name)s' (%(vendor)s) expires in %(days)s day(s)."
+            )
+            verb_params = {
+                "name": str(license_obj.name),
+                "vendor": str(license_obj.vendor),
+                "days": str(days_left),
+            }
+        notify.send(
+            bot,
+            recipient=owner_user,
+            verb=verb,
+            verb_params=verb_params,
+            redirect=reverse("software-license-view"),
+            label="System",
+            icon="information",
+        )
+
+
 register_job(notify_expiring_assets, "interval", days=1)
 register_job(notify_expiring_documents, "interval", hours=4)
 register_job(mark_expired_assets, "interval", days=1)
 register_job(notify_overdue_assignments, "interval", days=1)
 register_job(notify_pending_acceptances, "interval", days=1)
+register_job(notify_expiring_licenses, "interval", days=1)

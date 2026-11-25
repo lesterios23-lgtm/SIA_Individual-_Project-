@@ -4,6 +4,8 @@ Module containing custom filter classes for various models.
 
 import uuid
 
+from datetime import timedelta
+
 import django_filters
 from django import forms
 from django.db.models import Q
@@ -22,6 +24,7 @@ from .models import (
     AssetLot,
     AssetRequest,
     AssetServiceRequest,
+    SoftwareLicense,
 )
 
 
@@ -969,3 +972,59 @@ class AssetBatchNoFilter(FilterSet):
         fields = [
             "lot_number",
         ]
+
+
+class SoftwareLicenseFilter(CustomFilterSet):
+    """
+    Filter set for SoftwareLicense register, including Expiring Soon / Expired.
+    """
+
+    search = django_filters.CharFilter(method="search_method")
+    vendor = django_filters.CharFilter(field_name="vendor", lookup_expr="icontains")
+    status = django_filters.ChoiceFilter(
+        choices=[
+            ("Active", _("Active")),
+            ("Expiring Soon", _("Expiring Soon")),
+            ("Expired", _("Expired")),
+        ],
+        method="filter_status",
+        label=_("Status"),
+        empty_label=_("All"),
+    )
+
+    class Meta:
+        model = SoftwareLicense
+        fields = ["vendor", "renewal_owner"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for visible in self.form.visible_fields():
+            visible.field.widget.attrs["id"] = str(uuid.uuid4())
+
+    def search_method(self, queryset, _, value):
+        if not value:
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(vendor__icontains=value)
+            | Q(license_key__icontains=value)
+            | Q(renewal_owner__employee_first_name__icontains=value)
+            | Q(renewal_owner__employee_last_name__icontains=value)
+        ).distinct()
+
+    def filter_status(self, queryset, _, value):
+        today = timezone.now().date()
+        soon_cutoff = today + timedelta(days=SoftwareLicense.EXPIRING_SOON_DAYS)
+        if value == "Expired":
+            return queryset.filter(expiry_date__isnull=False, expiry_date__lt=today)
+        if value == "Expiring Soon":
+            return queryset.filter(
+                expiry_date__isnull=False,
+                expiry_date__gte=today,
+                expiry_date__lte=soon_cutoff,
+            )
+        if value == "Active":
+            return queryset.filter(
+                Q(expiry_date__isnull=True) | Q(expiry_date__gt=soon_cutoff)
+            )
+        return queryset

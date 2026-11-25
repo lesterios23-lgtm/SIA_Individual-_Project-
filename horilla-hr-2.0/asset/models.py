@@ -1252,3 +1252,173 @@ class AssetServiceRequestNote(HorillaModel):
 
     def __str__(self):
         return f"{self.note}"
+
+
+class SoftwareLicense(HorillaModel):
+    """
+    Centralized register of software licenses with seat tracking and
+    automated renewal monitoring (Mod 6 - P9, P10).
+    """
+
+    EXPIRING_SOON_DAYS = 60
+
+    name = models.CharField(max_length=255, verbose_name=_("License Name"))
+    vendor = models.CharField(max_length=255, verbose_name=_("Vendor"))
+    license_key = models.CharField(
+        max_length=255, blank=True, default="", verbose_name=_("License Key")
+    )
+    total_seats = models.PositiveIntegerField(default=1, verbose_name=_("Total Seats"))
+    purchase_date = models.DateField(verbose_name=_("Purchase Date"))
+    expiry_date = models.DateField(
+        null=True, blank=True, verbose_name=_("Expiry Date")
+    )
+    cost = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, verbose_name=_("Cost")
+    )
+    renewal_owner = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="owned_software_licenses",
+        verbose_name=_("Renewal Owner"),
+    )
+    notes = models.TextField(null=True, blank=True, verbose_name=_("Notes"))
+    objects = models.Manager()
+
+    class Meta:
+        ordering = ["expiry_date", "name"]
+        verbose_name = _("Software License")
+        verbose_name_plural = _("Software Licenses")
+
+    def __str__(self):
+        return f"{self.name} ({self.vendor})"
+
+    @property
+    def status(self):
+        if self.expiry_date:
+            today = timezone.now().date()
+            if self.expiry_date < today:
+                return "Expired"
+            if self.expiry_date <= today + datetime.timedelta(
+                days=self.EXPIRING_SOON_DAYS
+            ):
+                return "Expiring Soon"
+        return "Active"
+
+    @property
+    def seats_used(self):
+        return self.allocations.count()
+
+    @property
+    def seats_available(self):
+        return max(0, self.total_seats - self.seats_used)
+
+    def seats_col(self):
+        used = self.seats_used
+        total = self.total_seats
+        if used >= total:
+            return format_html(
+                '<span class="link-danger fw-bold">{} / {}</span>', used, total
+            )
+        return format_html("<span>{} / {}</span>", used, total)
+
+    def status_col(self):
+        return render_template(
+            path="cbv/software_license/status.html",
+            context={"instance": self},
+        )
+
+    def row_status_class(self):
+        return {
+            "Active": "row-status--green",
+            "Expiring Soon": "row-status--yellow",
+            "Expired": "row-status--red",
+        }.get(self.status, "")
+
+    def actions(self):
+        return render_template(
+            path="cbv/software_license/actions.html",
+            context={"instance": self},
+        )
+
+    def detail_actions(self):
+        return render_template(
+            path="cbv/software_license/detail_actions.html",
+            context={"instance": self},
+        )
+
+    def allocations_display(self):
+        return render_template(
+            path="cbv/software_license/allocations_list.html",
+            context={
+                "instance": self,
+                "allocations": self.allocations.select_related("employee", "asset").all(),
+            },
+        )
+
+    def get_detail_url(self):
+        return reverse("software-license-detail", kwargs={"pk": self.pk})
+
+    def get_update_url(self):
+        return reverse_lazy("software-license-update", kwargs={"pk": self.pk})
+
+    def get_delete_url(self):
+        return reverse_lazy("software-license-delete", kwargs={"pk": self.pk})
+
+    def get_allocate_url(self):
+        return reverse_lazy("license-allocation-create", kwargs={"license_id": self.pk})
+
+
+class LicenseAllocation(HorillaModel):
+    """
+    Links a SoftwareLicense seat to an Employee and/or an Asset (device).
+    """
+
+    license = models.ForeignKey(
+        SoftwareLicense,
+        on_delete=models.CASCADE,
+        related_name="allocations",
+        verbose_name=_("Software License"),
+    )
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="software_license_allocations",
+        verbose_name=_("Employee"),
+    )
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="software_license_allocations",
+        verbose_name=_("Asset / Device"),
+    )
+    allocated_date = models.DateField(
+        default=datetime.date.today, verbose_name=_("Allocated Date")
+    )
+    objects = models.Manager()
+
+    class Meta:
+        ordering = ["-allocated_date", "-id"]
+        verbose_name = _("License Allocation")
+        verbose_name_plural = _("License Allocations")
+
+    def __str__(self):
+        target = self.employee or self.asset or _("Unassigned")
+        return f"{self.license.name} -> {target}"
+
+    def clean(self):
+        super().clean()
+        if not self.employee and not self.asset:
+            raise ValidationError(
+                _("Please select at least an employee or an asset/device.")
+            )
+        if self.license_id and self.pk is None and self.license.seats_available <= 0:
+            raise ValidationError(
+                _("All %(total)s seat(s) for '%(name)s' are already allocated.")
+                % {"total": self.license.total_seats, "name": self.license.name}
+            )

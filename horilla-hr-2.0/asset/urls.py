@@ -13,6 +13,7 @@ from asset.cbv import (
     asset_tab,
     dashboard,
     request_and_allocation,
+    software_license,
 )
 from asset.forms import AssetCategoryForm, AssetForm
 from asset.models import Asset, AssetCategory
@@ -612,5 +613,55 @@ urlpatterns = [
         "enable-disable-asset-fine/",
         views.enable_disable_asset_fine,
         name="enable-disable-asset-fine",
+    ),
+    path(
+        "software-licenses/",
+        software_license.SoftwareLicenseView.as_view(),
+        name="software-license-view",
+    ),
+    path(
+        "software-license-nav/",
+        software_license.SoftwareLicenseNav.as_view(),
+        name="software-license-nav",
+    ),
+    path(
+        "software-license-list/",
+        software_license.SoftwareLicenseListView.as_view(),
+        name="software-license-list",
+    ),
+    path(
+        "software-license-create/",
+        software_license.SoftwareLicenseFormView.as_view(),
+        name="software-license-create",
+    ),
+    path(
+        "software-license-update/<int:pk>/",
+        software_license.SoftwareLicenseFormView.as_view(),
+        name="software-license-update",
+    ),
+    path(
+        "software-license-delete/<int:pk>/",
+        software_license.SoftwareLicenseDeleteView.as_view(),
+        name="software-license-delete",
+    ),
+    path(
+        "software-license-detail/<int:pk>/",
+        software_license.SoftwareLicenseDetailView.as_view(),
+        name="software-license-detail",
+    ),
+    path(
+        "license-allocation-create/",
+        software_license.LicenseAllocationFormView.as_view(),
+        name="license-allocation-create-new",
+    ),
+    path(
+        "license-allocation-create/<int:license_id>/",
+        software_license.LicenseAllocationFormView.as_view(),
+        name="license-allocation-create",
+    ),
+    path(
+        "license-allocation-delete/<int:pk>/",
+        software_license.LicenseAllocationDeleteView.as_view(),
+        name="license-allocation-delete",
     ),
 ]

@@ -1,0 +1,13 @@
+{% load i18n %}
+<div class="d-flex align-items-center">
+    {% if instance.status == "Expired" %}
+        <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--danger"></span>
+        <span class="link-danger">{% trans "Expired" %}</span>
+    {% elif instance.status == "Expiring Soon" %}
+        <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--warning"></span>
+        <span class="link-warning">{% trans "Expiring Soon" %}</span>
+    {% else %}
+        <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--success"></span>
+        <span class="link-success">{% trans "Active" %}</span>
+    {% endif %}
+</div>
