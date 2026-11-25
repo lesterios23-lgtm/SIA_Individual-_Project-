@@ -115,6 +115,11 @@ class AssetInformationView(HorillaDetailedView):
         (_("Status"), "asset_status_col"),
         "asset_lot_number_id",
         "asset_category_id",
+        "purchase_reference",
+        "supplier_name",
+        "invoice_number",
+        "received_date",
+        "approval_reference",
     ]
 
     def get_context_data(self, **kwargs: Any):

@@ -205,6 +205,35 @@ class Asset(HorillaModel):
     notify_before = models.IntegerField(
         default=1, null=True, verbose_name=_("Notify Before (days)")
     )
+    purchase_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name=_("Purchase Reference"),
+    )
+    supplier_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Supplier Name"),
+    )
+    invoice_number = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name=_("Invoice Number"),
+    )
+    received_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("Received Date"),
+    )
+    approval_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name=_("Approval Reference"),
+    )
     objects = HorillaCompanyManager("asset_category_id__company_id")
 
     @classmethod

@@ -69,6 +69,33 @@ class AssetForm(ModelForm):
             "asset_lot_number_id": forms.Select(
                 attrs={"onchange": "batchNoChange($(this))"}
             ),
+            "received_date": forms.DateInput(
+                attrs={"type": "date", "class": "oh-input w-100"}
+            ),
+            "purchase_reference": forms.TextInput(
+                attrs={
+                    "class": "oh-input w-100",
+                    "placeholder": _("e.g. PO-2026-001 / Akaunting Ref"),
+                }
+            ),
+            "supplier_name": forms.TextInput(
+                attrs={
+                    "class": "oh-input w-100",
+                    "placeholder": _("e.g. TechSupply PH"),
+                }
+            ),
+            "invoice_number": forms.TextInput(
+                attrs={
+                    "class": "oh-input w-100",
+                    "placeholder": _("e.g. INV-2026-0042"),
+                }
+            ),
+            "approval_reference": forms.TextInput(
+                attrs={
+                    "class": "oh-input w-100",
+                    "placeholder": _("e.g. APR-2026-015"),
+                }
+            ),
         }
         labels = {
             "asset_name": _("Asset Name"),
@@ -467,6 +494,20 @@ class AssetAllocationForm(ModelForm):
         asset = cleaned_data.get("asset_id")
         asset_item = cleaned_data.get("asset_item_id")
         if asset:
+            missing = []
+            if not (asset.purchase_reference or "").strip():
+                missing.append(str(_("Purchase Reference")))
+            if not asset.received_date:
+                missing.append(str(_("Received Date")))
+            if missing:
+                raise ValidationError(
+                    {
+                        "asset_id": _(
+                            "Cannot assign this asset until procurement intake is complete. Missing: %(fields)s."
+                        )
+                        % {"fields": ", ".join(missing)}
+                    }
+                )
             if not asset_item:
                 available_items = asset.asset_items.filter(status="Available")
                 if available_items.count() == 1:

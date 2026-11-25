@@ -135,6 +135,10 @@ class AssetFilter(CustomFilterSet):
     search = django_filters.CharFilter(method="search_method")
     category = django_filters.CharFilter(field_name="asset_category_id")
     expired = django_filters.BooleanFilter(method="filter_expired")
+    missing_procurement_info = django_filters.BooleanFilter(
+        method="filter_missing_procurement_info",
+        label=_("Missing procurement info"),
+    )
     # Purchase date range is also reachable through the Advanced "+ Add
     # filter" builder (custom_field/custom_lookup/custom_value), but that
     # needs two parallel-array rows for a from/till pair -- fragile to
@@ -216,6 +220,20 @@ class AssetFilter(CustomFilterSet):
         if value:
             return queryset.filter(expiry_date__lt=today)
         return queryset.filter(Q(expiry_date__isnull=True) | Q(expiry_date__gte=today))
+
+    def filter_missing_procurement_info(self, queryset, _, value):
+        """
+        Filters assets missing required procurement intake fields
+        (purchase_reference or received_date).
+        """
+        missing_q = (
+            Q(purchase_reference__isnull=True)
+            | Q(purchase_reference="")
+            | Q(received_date__isnull=True)
+        )
+        if value:
+            return queryset.filter(missing_q)
+        return queryset.exclude(missing_q)
 
     def _build_custom_filter_fields(self):
         """
