@@ -24,6 +24,7 @@ from asset.models import (
     AssetLot,
     AssetReport,
     AssetRequest,
+    AssetRetirement,
     AssetServiceRequest,
     LicenseAllocation,
     SoftwareLicense,
@@ -1030,4 +1031,104 @@ class LicenseAllocationForm(ModelForm):
                 _("All %(total)s seat(s) for '%(name)s' are already allocated.")
                 % {"total": license_obj.total_seats, "name": license_obj.name}
             )
+        return cleaned_data
+
+
+class AssetRetirementForm(ModelForm):
+    """
+    Create or update an AssetRetirement checklist record.
+    Blocks closing unless sanitization_verified and approved_by are set.
+    """
+
+    cols = {
+        "asset": 6,
+        "proposed_action": 6,
+        "sanitization_method": 6,
+        "sanitization_date": 6,
+        "sanitization_technician": 6,
+        "sanitization_verified": 6,
+        "evidence_file": 12,
+        "approved_by": 6,
+        "approval_date": 6,
+        "final_disposition": 12,
+        "closed": 12,
+    }
+
+    class Meta:
+        model = AssetRetirement
+        fields = [
+            "asset",
+            "proposed_action",
+            "sanitization_method",
+            "sanitization_date",
+            "sanitization_technician",
+            "sanitization_verified",
+            "evidence_file",
+            "approved_by",
+            "approval_date",
+            "final_disposition",
+            "closed",
+        ]
+        widgets = {
+            "asset": forms.Select(attrs={"class": "oh-select oh-select-2 w-100"}),
+            "proposed_action": forms.Select(
+                attrs={"class": "oh-select oh-select-2 w-100"}
+            ),
+            "sanitization_method": forms.TextInput(
+                attrs={
+                    "class": "oh-input w-100",
+                    "placeholder": _("e.g. NIST 800-88 Purge / Factory Reset + Wipe"),
+                }
+            ),
+            "sanitization_date": forms.DateInput(
+                attrs={"type": "date", "class": "oh-input w-100"}
+            ),
+            "sanitization_technician": forms.Select(
+                attrs={"class": "oh-select oh-select-2 w-100"}
+            ),
+            "approved_by": forms.Select(attrs={"class": "oh-select oh-select-2 w-100"}),
+            "approval_date": forms.DateInput(
+                attrs={"type": "date", "class": "oh-input w-100"}
+            ),
+            "final_disposition": forms.Textarea(
+                attrs={
+                    "class": "oh-input oh-input--textarea oh-input--block",
+                    "rows": 3,
+                    "cols": 40,
+                    "placeholder": _(
+                        "e.g. Sent to certified e-waste recycler / Donated to local school."
+                    ),
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        reload_queryset(self.fields)
+        self.fields["sanitization_technician"].queryset = Employee.objects.filter(
+            is_active=True
+        )
+        self.fields["approved_by"].queryset = Employee.objects.filter(is_active=True)
+        if self.instance.pk:
+            self.fields["asset"].queryset = Asset.objects.filter(
+                Q(retirement__isnull=True) | Q(pk=self.instance.asset_id)
+            )
+        else:
+            self.fields["asset"].queryset = Asset.objects.filter(
+                retirement__isnull=True
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("closed"):
+            missing = []
+            if not cleaned_data.get("sanitization_verified"):
+                missing.append(str(_("Sanitization Verified")))
+            if not cleaned_data.get("approved_by"):
+                missing.append(str(_("Approved By")))
+            if missing:
+                raise ValidationError(
+                    _("Cannot close retirement record. Missing: %(fields)s.")
+                    % {"fields": ", ".join(missing)}
+                )
         return cleaned_data

@@ -69,6 +69,18 @@ SUBMENUS = [
         "accessibility": "asset.sidebar.license_accessibility",
         "match_prefixes": ["/asset/software-license-"],
     },
+    {
+        "menu": _("Asset Retirement"),
+        "redirect": reverse("asset-retirement-view"),
+        "accessibility": "asset.sidebar.license_accessibility",
+        "match_prefixes": ["/asset/asset-retirement-"],
+    },
+    {
+        "menu": _("Depreciation Report"),
+        "redirect": reverse("asset-depreciation-report"),
+        "accessibility": "asset.sidebar.license_accessibility",
+        "match_prefixes": ["/asset/depreciation-report"],
+    },
 ]
 
 

@@ -13,6 +13,7 @@ from asset.cbv import (
     asset_tab,
     dashboard,
     request_and_allocation,
+    retirement_and_depreciation,
     software_license,
 )
 from asset.forms import AssetCategoryForm, AssetForm
@@ -663,5 +664,50 @@ urlpatterns = [
         "license-allocation-delete/<int:pk>/",
         software_license.LicenseAllocationDeleteView.as_view(),
         name="license-allocation-delete",
+    ),
+    path(
+        "asset-retirements/",
+        retirement_and_depreciation.AssetRetirementView.as_view(),
+        name="asset-retirement-view",
+    ),
+    path(
+        "asset-retirement-nav/",
+        retirement_and_depreciation.AssetRetirementNav.as_view(),
+        name="asset-retirement-nav",
+    ),
+    path(
+        "asset-retirement-list/",
+        retirement_and_depreciation.AssetRetirementListView.as_view(),
+        name="asset-retirement-list",
+    ),
+    path(
+        "asset-retirement-create/",
+        retirement_and_depreciation.AssetRetirementFormView.as_view(),
+        name="asset-retirement-create",
+    ),
+    path(
+        "asset-retirement-update/<int:pk>/",
+        retirement_and_depreciation.AssetRetirementFormView.as_view(),
+        name="asset-retirement-update",
+    ),
+    path(
+        "asset-retirement-delete/<int:pk>/",
+        retirement_and_depreciation.AssetRetirementDeleteView.as_view(),
+        name="asset-retirement-delete",
+    ),
+    path(
+        "asset-retirement-detail/<int:pk>/",
+        retirement_and_depreciation.AssetRetirementDetailView.as_view(),
+        name="asset-retirement-detail",
+    ),
+    path(
+        "depreciation-report/",
+        retirement_and_depreciation.DepreciationReportView.as_view(),
+        name="asset-depreciation-report",
+    ),
+    path(
+        "depreciation-report/export-csv/",
+        retirement_and_depreciation.DepreciationReportExportCSVView.as_view(),
+        name="asset-depreciation-report-csv",
     ),
 ]

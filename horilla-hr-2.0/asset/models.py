@@ -6,6 +6,7 @@ within an Asset Management System.
 """
 
 import datetime
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -234,6 +235,16 @@ class Asset(HorillaModel):
         default="",
         verbose_name=_("Approval Reference"),
     )
+    useful_life_years = models.PositiveIntegerField(
+        default=3,
+        verbose_name=_("Useful Life (Years)"),
+    )
+    salvage_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Salvage Value"),
+    )
     objects = HorillaCompanyManager("asset_category_id__company_id")
 
     @classmethod
@@ -258,6 +269,40 @@ class Asset(HorillaModel):
     @property
     def available_count(self):
         return self.asset_items.filter(status="Available").count()
+
+    @property
+    def annual_depreciation(self):
+        """Straight-line yearly depreciation: (cost - salvage) / useful_life_years."""
+        cost = Decimal(self.asset_purchase_cost or 0)
+        salvage = Decimal(self.salvage_value or 0)
+        depreciable = max(Decimal("0.00"), cost - salvage)
+        years = self.useful_life_years or 1
+        return (depreciable / Decimal(years)).quantize(Decimal("0.01"))
+
+    @property
+    def accumulated_depreciation(self):
+        """Straight-line depreciation accumulated from purchase_date through today."""
+        cost = Decimal(self.asset_purchase_cost or 0)
+        salvage = Decimal(self.salvage_value or 0)
+        depreciable = max(Decimal("0.00"), cost - salvage)
+        if not self.asset_purchase_date or depreciable <= 0:
+            return Decimal("0.00")
+        days_elapsed = max(0, (timezone.now().date() - self.asset_purchase_date).days)
+        years_elapsed = Decimal(days_elapsed) / Decimal("365.25")
+        accumulated = (self.annual_depreciation * years_elapsed).quantize(
+            Decimal("0.01")
+        )
+        return min(depreciable, accumulated)
+
+    @property
+    def current_book_value(self):
+        """Current net book value: cost - accumulated_depreciation (floored at salvage)."""
+        cost = Decimal(self.asset_purchase_cost or 0)
+        salvage = Decimal(self.salvage_value or 0)
+        return max(
+            salvage,
+            (cost - self.accumulated_depreciation).quantize(Decimal("0.01")),
+        )
 
     class Meta:
         ordering = ["-created_at"]
@@ -1451,3 +1496,142 @@ class LicenseAllocation(HorillaModel):
                 _("All %(total)s seat(s) for '%(name)s' are already allocated.")
                 % {"total": self.license.total_seats, "name": self.license.name}
             )
+
+
+class AssetRetirement(HorillaModel):
+    """
+    Retirement, data-sanitization checklist, and disposal approval record
+    linked one-to-one with an Asset (Mod 7 - P11).
+    """
+
+    PROPOSED_ACTIONS = [
+        ("Repair", _("Repair")),
+        ("Reuse", _("Reuse")),
+        ("Store", _("Store")),
+        ("Donate", _("Donate")),
+        ("Dispose", _("Dispose")),
+    ]
+
+    asset = models.OneToOneField(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name="retirement",
+        verbose_name=_("Asset"),
+    )
+    proposed_action = models.CharField(
+        max_length=20,
+        choices=PROPOSED_ACTIONS,
+        default="Dispose",
+        verbose_name=_("Proposed Action"),
+    )
+    sanitization_method = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Sanitization Method"),
+    )
+    sanitization_date = models.DateField(
+        null=True, blank=True, verbose_name=_("Sanitization Date")
+    )
+    sanitization_technician = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sanitized_assets",
+        verbose_name=_("Sanitization Technician"),
+    )
+    sanitization_verified = models.BooleanField(
+        default=False, verbose_name=_("Sanitization Verified")
+    )
+    evidence_file = models.FileField(
+        upload_to=upload_path,
+        null=True,
+        blank=True,
+        verbose_name=_("Sanitization Evidence"),
+    )
+    approved_by = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_asset_retirements",
+        verbose_name=_("Approved By"),
+    )
+    approval_date = models.DateField(
+        null=True, blank=True, verbose_name=_("Approval Date")
+    )
+    final_disposition = models.TextField(
+        null=True, blank=True, verbose_name=_("Final Disposition")
+    )
+    closed = models.BooleanField(default=False, verbose_name=_("Closed"))
+    objects = models.Manager()
+
+    class Meta:
+        ordering = ["-id"]
+        verbose_name = _("Asset Retirement")
+        verbose_name_plural = _("Asset Retirements")
+
+    def __str__(self):
+        return f"{self.asset} ({self.proposed_action})"
+
+    def clean(self):
+        super().clean()
+        if self.closed:
+            missing = []
+            if not self.sanitization_verified:
+                missing.append(str(_("Sanitization Verified")))
+            if not self.approved_by_id:
+                missing.append(str(_("Approved By")))
+            if missing:
+                raise ValidationError(
+                    _("Cannot close retirement record. Missing: %(fields)s.")
+                    % {"fields": ", ".join(missing)}
+                )
+
+    def sanitization_col(self):
+        if self.sanitization_verified:
+            return format_html(
+                '<span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--success"></span>'
+                '<span class="link-success">{}</span>',
+                _("Verified"),
+            )
+        return format_html(
+            '<span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--warning"></span>'
+            '<span class="link-warning">{}</span>',
+            _("Pending"),
+        )
+
+    def status_col(self):
+        if self.closed:
+            return format_html(
+                '<span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--success"></span>'
+                '<span class="link-success">{}</span>',
+                _("Closed"),
+            )
+        return format_html(
+            '<span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--info"></span>'
+            '<span class="link-info">{}</span>',
+            _("Open"),
+        )
+
+    def actions(self):
+        return render_template(
+            path="cbv/asset_retirement/actions.html",
+            context={"instance": self},
+        )
+
+    def detail_actions(self):
+        return render_template(
+            path="cbv/asset_retirement/detail_actions.html",
+            context={"instance": self},
+        )
+
+    def get_detail_url(self):
+        return reverse("asset-retirement-detail", kwargs={"pk": self.pk})
+
+    def get_update_url(self):
+        return reverse_lazy("asset-retirement-update", kwargs={"pk": self.pk})
+
+    def get_delete_url(self):
+        return reverse_lazy("asset-retirement-delete", kwargs={"pk": self.pk})

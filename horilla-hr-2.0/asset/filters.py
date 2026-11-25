@@ -23,6 +23,7 @@ from .models import (
     AssetCategory,
     AssetLot,
     AssetRequest,
+    AssetRetirement,
     AssetServiceRequest,
     SoftwareLicense,
 )
@@ -1046,3 +1047,30 @@ class SoftwareLicenseFilter(CustomFilterSet):
                 Q(expiry_date__isnull=True) | Q(expiry_date__gt=soon_cutoff)
             )
         return queryset
+
+
+class AssetRetirementFilter(CustomFilterSet):
+    """
+    Filter set for AssetRetirement records.
+    """
+
+    search = django_filters.CharFilter(method="search_method")
+
+    class Meta:
+        model = AssetRetirement
+        fields = ["proposed_action", "sanitization_verified", "closed"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for visible in self.form.visible_fields():
+            visible.field.widget.attrs["id"] = str(uuid.uuid4())
+
+    def search_method(self, queryset, _, value):
+        if not value:
+            return queryset
+        return queryset.filter(
+            Q(asset__asset_name__icontains=value)
+            | Q(asset__asset_tracking_id__icontains=value)
+            | Q(sanitization_method__icontains=value)
+            | Q(final_disposition__icontains=value)
+        ).distinct()

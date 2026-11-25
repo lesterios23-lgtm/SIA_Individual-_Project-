@@ -1,0 +1,34 @@
+{% load i18n %}
+<div class="oh-dropdown__filter-body">
+    <div class="oh-accordion">
+        <div class="oh-accordion-header">{% trans "Asset Retirement" %}</div>
+        <div class="oh-accordion-body">
+            <div class="row">
+                <div class="col-sm-12 col-md-12 col-lg-6">
+                    <div class="oh-input-group">
+                        <label class="oh-label" for="{{ form.proposed_action.id_for_label }}">
+                            {% trans "Proposed Action" %}
+                        </label>
+                        {{ form.proposed_action }}
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-12 col-lg-6">
+                    <div class="oh-input-group">
+                        <label class="oh-label" for="{{ form.sanitization_verified.id_for_label }}">
+                            {% trans "Sanitization Verified" %}
+                        </label>
+                        {{ form.sanitization_verified }}
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-12 col-lg-12">
+                    <div class="oh-input-group">
+                        <label class="oh-label" for="{{ form.closed.id_for_label }}">
+                            {% trans "Closed" %}
+                        </label>
+                        {{ form.closed }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,88 @@
+{% extends "index.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="oh-wrapper mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h1 class="oh-main__titlebar-title fw-bold mb-0">{% trans "Depreciation Report" %}</h1>
+            <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                {% trans "Straight-line depreciation schedule for Finance / Akaunting reconciliation." %}
+            </p>
+        </div>
+        <a
+            href="{% url 'asset-depreciation-report-csv' %}"
+            class="oh-btn oh-btn--secondary"
+        >
+            <ion-icon name="download-outline"></ion-icon>
+            {% trans "Export CSV" %}
+        </a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="oh-card p-3">
+                <div class="text-muted" style="font-size: 0.8rem;">{% trans "Total Assets" %}</div>
+                <div class="fw-bold fs-4">{{ total_assets }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="oh-card p-3">
+                <div class="text-muted" style="font-size: 0.8rem;">{% trans "Total Purchase Cost" %}</div>
+                <div class="fw-bold fs-4">{{ total_cost|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="oh-card p-3">
+                <div class="text-muted" style="font-size: 0.8rem;">{% trans "Accumulated Depreciation" %}</div>
+                <div class="fw-bold fs-4 link-warning">{{ total_accumulated|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="oh-card p-3">
+                <div class="text-muted" style="font-size: 0.8rem;">{% trans "Total Book Value" %}</div>
+                <div class="fw-bold fs-4 link-success">{{ total_book_value|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="oh-card p-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th>{% trans "Asset" %}</th>
+                        <th>{% trans "Serial No." %}</th>
+                        <th>{% trans "Purchase Date" %}</th>
+                        <th class="text-end">{% trans "Cost" %}</th>
+                        <th class="text-end">{% trans "Useful Life (Yrs)" %}</th>
+                        <th class="text-end">{% trans "Yearly Dep." %}</th>
+                        <th class="text-end">{% trans "Accumulated Dep." %}</th>
+                        <th class="text-end">{% trans "Book Value" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="fw-semibold">{{ row.asset.asset_name }}</td>
+                        <td>{{ row.asset.asset_tracking_id }}</td>
+                        <td>{{ row.asset.asset_purchase_date }}</td>
+                        <td class="text-end">{{ row.asset.asset_purchase_cost|floatformat:2 }}</td>
+                        <td class="text-end">{{ row.asset.useful_life_years }}</td>
+                        <td class="text-end">{{ row.yearly_depreciation|floatformat:2 }}</td>
+                        <td class="text-end">{{ row.accumulated_depreciation|floatformat:2 }}</td>
+                        <td class="text-end fw-bold">{{ row.book_value|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            {% trans "No assets available for depreciation reporting." %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
