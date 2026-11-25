@@ -1,0 +1,13 @@
+{% load i18n %}
+<div class="d-flex align-items-center">
+    {% if instance.priority == "High" %}
+        <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--danger"></span>
+        <span class="link-danger">{% trans "High" %}</span>
+    {% elif instance.priority == "Low" %}
+        <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--info"></span>
+        <span class="link-info">{% trans "Low" %}</span>
+    {% else %}
+        <span class="oh-dot oh-dot--small me-1 oh-dot--color oh-dot--warning"></span>
+        <span class="link-warning">{% trans "Medium" %}</span>
+    {% endif %}
+</div>

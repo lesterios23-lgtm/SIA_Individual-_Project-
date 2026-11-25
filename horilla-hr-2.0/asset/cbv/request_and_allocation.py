@@ -297,6 +297,9 @@ class AssetRequestList(HorillaListView):
             "requested_employee_id__get_avatar",
         ),
         (_("Asset Category"), "asset_category_id"),
+        (_("Priority"), "priority_col"),
+        (_("Needed Date"), "needed_date"),
+        (_("Work Location"), "work_location"),
         (_("Requested Date"), "asset_request_date"),
         (_("Status"), "status_col"),
     ]
@@ -306,6 +309,9 @@ class AssetRequestList(HorillaListView):
     sortby_mapping = [
         ("Request User", "requested_employee_id__get_full_name"),
         ("Asset Category", "asset_category_id__asset_category_name"),
+        ("Priority", "priority"),
+        ("Needed Date", "needed_date"),
+        ("Work Location", "work_location"),
         ("Requested Date", "asset_request_date"),
         ("Status", "status_col"),
     ]
@@ -825,12 +831,17 @@ class AssetRequestDetailView(HorillaDetailedView):
         super().__init__(**kwargs)
         self.body = [
             (_("Asset Category"), "asset_category_id"),
+            (_("Priority"), "priority_col"),
+            (_("Needed Date"), "needed_date"),
+            (_("Work Location"), "work_location"),
             (_("Requested Date"), "asset_request_date"),
             (_("Status"), "status_col"),
+            (_("Purpose"), "purpose"),
             (_("Request Description"), "description"),
         ]
 
         self.cols = {
+            "purpose": 12,
             "description": 12,
         }
 
@@ -1074,8 +1085,25 @@ class AssetRequestCreateForm(HorillaFormView):
         Handles validation and saving of an AssetRequestForm.
         """
         if form.is_valid():
+            is_new = form.instance.pk is None
             message = _("Asset Request Created Successfully")
-            form.save()
+            instance = form.save()
+            if is_new and instance.priority == "High":
+                recipients = horilla_users_with_perms("asset.add_assetassignment")
+                if recipients:
+                    notify.send(
+                        instance.requested_employee_id,
+                        recipient=recipients,
+                        verb=gettext_noop(
+                            "High-priority asset request for %(category)s submitted by %(employee)s."
+                        ),
+                        verb_params={
+                            "category": str(instance.asset_category_id),
+                            "employee": str(instance.requested_employee_id),
+                        },
+                        redirect=reverse("asset-request-allocation-view"),
+                        icon="alert-circle-outline",
+                    )
             messages.success(self.request, message)
             return self.HttpResponse()
         return super().form_valid(form)
@@ -1282,6 +1310,7 @@ class AssetApproveFormView(HorillaFormView):
         if not asset_request:
             messages.error(self.request, _("Asset request not found."))
             return context
+        context["asset_request"] = asset_request
         asset_category = asset_request.asset_category_id
         assets = Asset.available_assets().filter(asset_category_id=asset_category)
         self.form.fields["asset_id"].queryset = assets
@@ -1296,8 +1325,13 @@ class AssetApproveFormView(HorillaFormView):
     def form_invalid(self, form: Any) -> HttpResponse:
         if not form.is_valid():
             errors = form.errors.as_data()
+            asset_request = AssetRequest.objects.filter(
+                id=self.kwargs.get("req_id")
+            ).first()
             return render(
-                self.request, self.template_name, {"form": form, "errors": errors}
+                self.request,
+                self.template_name,
+                {"form": form, "errors": errors, "asset_request": asset_request},
             )
         return super().form_invalid(form)
 

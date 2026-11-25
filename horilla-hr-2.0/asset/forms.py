@@ -290,7 +290,17 @@ class AssetRequestForm(ModelForm):
     A Django ModelForm for creating and updating AssetRequest instances.
     """
 
-    cols = {"requested_employee_id": 12, "asset_category_id": 12, "description": 12}
+    MIN_PURPOSE_LENGTH = 10
+
+    cols = {
+        "requested_employee_id": 6,
+        "asset_category_id": 6,
+        "priority": 6,
+        "needed_date": 6,
+        "work_location": 12,
+        "purpose": 12,
+        "description": 12,
+    }
 
     class Meta:
         """
@@ -317,15 +327,34 @@ class AssetRequestForm(ModelForm):
                     "class": "oh-select  oh-select-2 select2-hidden-accessible",
                 }
             ),
+            "needed_date": forms.DateInput(
+                attrs={"type": "date", "class": "oh-input w-100"}
+            ),
+            "priority": forms.Select(
+                attrs={"class": "oh-select oh-select-2 w-100"}
+            ),
+            "work_location": forms.Select(
+                attrs={"class": "oh-select oh-select-2 w-100"}
+            ),
+            "purpose": forms.Textarea(
+                attrs={
+                    "placeholder": _(
+                        "Explain why you need this equipment and what work it will support."
+                    ),
+                    "class": "oh-input oh-input--textarea oh-input--block",
+                    "rows": 3,
+                    "cols": 40,
+                }
+            ),
             "description": forms.Textarea(
                 attrs={
                     "type": "text",
                     "id": "objective_description",
                     "placeholder": _(
-                        "Requesting a laptop for software development purposes."
+                        "Additional notes or specifications (optional)."
                     ),
                     "class": "oh-input oh-input--textarea oh-input--block",
-                    "rows": 3,
+                    "rows": 2,
                     "cols": 40,
                 }
             ),
@@ -352,7 +381,34 @@ class AssetRequestForm(ModelForm):
             )
             self.fields["requested_employee_id"].initial = user.employee_get
 
+        self.fields["asset_category_id"].required = True
+        self.fields["purpose"].required = True
+        self.fields["needed_date"].required = True
+        self.fields["priority"].required = True
+        self.fields["work_location"].required = True
+        self.fields["work_location"].choices = [
+            ("", "---------"),
+            *AssetRequest.WORK_LOCATIONS,
+        ]
         self.fields["asset_category_id"].widget.attrs.update({"id": str(uuid.uuid4())})
+
+    def clean_purpose(self):
+        purpose = (self.cleaned_data.get("purpose") or "").strip()
+        if len(purpose) < self.MIN_PURPOSE_LENGTH:
+            raise ValidationError(
+                _("Please explain the purpose in at least %(n)s characters.")
+                % {"n": self.MIN_PURPOSE_LENGTH}
+            )
+        return purpose
+
+    def clean_needed_date(self):
+        needed_date = self.cleaned_data.get("needed_date")
+        if not needed_date:
+            raise ValidationError(_("Needed date is required."))
+        unchanged = self.instance.pk and needed_date == self.instance.needed_date
+        if needed_date < date.today() and not unchanged:
+            raise ValidationError(_("Needed date cannot be in the past."))
+        return needed_date
 
 
 class AssetAllocationForm(ModelForm):

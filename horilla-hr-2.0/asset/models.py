@@ -905,6 +905,17 @@ class AssetRequest(HorillaModel):
         ("Approved", _("Approved")),
         ("Rejected", _("Rejected")),
     ]
+    PRIORITY_CHOICES = [
+        ("Low", _("Low")),
+        ("Medium", _("Medium")),
+        ("High", _("High")),
+    ]
+    WORK_LOCATIONS = [
+        ("Oriental Mindoro HQ", _("Oriental Mindoro HQ")),
+        ("Metro Manila Office", _("Metro Manila Office")),
+        ("Visayas/Mindanao Hub", _("Visayas/Mindanao Hub")),
+        ("Remote", _("Remote")),
+    ]
     requested_employee_id = models.ForeignKey(
         Employee,
         on_delete=models.PROTECT,
@@ -917,6 +928,23 @@ class AssetRequest(HorillaModel):
         AssetCategory, on_delete=models.PROTECT, verbose_name=_("Asset Category")
     )
     asset_request_date = models.DateField(auto_now_add=True)
+    purpose = models.TextField(null=True, blank=True, verbose_name=_("Purpose"))
+    needed_date = models.DateField(
+        null=True, blank=True, verbose_name=_("Needed Date")
+    )
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default="Medium",
+        verbose_name=_("Priority"),
+    )
+    work_location = models.CharField(
+        max_length=50,
+        choices=WORK_LOCATIONS,
+        null=True,
+        blank=True,
+        verbose_name=_("Work Location"),
+    )
     description = models.TextField(
         null=True, blank=True, max_length=255, verbose_name=_("Description")
     )
@@ -941,6 +969,16 @@ class AssetRequest(HorillaModel):
 
         return render_template(
             path="cbv/request_and_allocation/status.html",
+            context={"instance": self},
+        )
+
+    def priority_col(self):
+        """
+        Custom column: Low / Medium / High priority badge.
+        """
+
+        return render_template(
+            path="cbv/request_and_allocation/priority.html",
             context={"instance": self},
         )
 

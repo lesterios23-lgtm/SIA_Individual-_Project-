@@ -1,4 +1,31 @@
+{% load i18n %}
 <div id="approve-container">
+    {% if asset_request %}
+    <div class="oh-card mb-3 p-3" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <div class="row g-2" style="font-size: 0.875rem;">
+            <div class="col-md-6">
+                <strong>{% trans "Requested By" %}:</strong> {{ asset_request.requested_employee_id }}
+            </div>
+            <div class="col-md-6">
+                <strong>{% trans "Category" %}:</strong> {{ asset_request.asset_category_id }}
+            </div>
+            <div class="col-md-6">
+                <strong>{% trans "Priority" %}:</strong> {{ asset_request.get_priority_display }}
+            </div>
+            <div class="col-md-6">
+                <strong>{% trans "Needed Date" %}:</strong> {{ asset_request.needed_date|default:"—" }}
+            </div>
+            <div class="col-md-12">
+                <strong>{% trans "Work Location" %}:</strong> {{ asset_request.get_work_location_display|default:"—" }}
+            </div>
+            {% if asset_request.purpose %}
+            <div class="col-md-12">
+                <strong>{% trans "Purpose" %}:</strong> {{ asset_request.purpose }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
     {% include "generic/horilla_form.html" %}
 </div>
 <script>
