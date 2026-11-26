@@ -16,8 +16,9 @@ from dataclasses import dataclass
 from urllib.parse import quote
 
 import requests
+import urllib3
 
-from .config import SOURCE_SYSTEM, gateway_url, hr_token, http_timeout
+from .config import SOURCE_SYSTEM, gateway_url, hr_token, http_timeout, verify_ssl
 
 MAX_STORED_BODY = 2000
 
@@ -127,10 +128,15 @@ def _classify(response, expected_event_id: str | None = None) -> GatewayResponse
 class GatewayClient:
     """Small, testable wrapper around the gateway contract."""
 
-    def __init__(self, *, base_url=None, token=None, timeout=None, session=None):
+    def __init__(
+        self, *, base_url=None, token=None, timeout=None, session=None, verify=None
+    ):
         self.base_url = (base_url or gateway_url()).rstrip("/")
         self._token = token if token is not None else hr_token()
         self.timeout = timeout if timeout is not None else http_timeout()
+        self.verify = verify_ssl() if verify is None else bool(verify)
+        if not self.verify:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         self.session = session or requests.Session()
 
     def _headers(self) -> dict:
@@ -150,7 +156,11 @@ class GatewayClient:
         url = "%s/events/" % self.base_url
         try:
             response = self.session.post(
-                url, json=envelope, headers=headers, timeout=self.timeout
+                url,
+                json=envelope,
+                headers=headers,
+                timeout=self.timeout,
+                verify=self.verify,
             )
         except requests.RequestException as exc:
             return GatewayResponse(
@@ -167,7 +177,9 @@ class GatewayClient:
         headers = self._headers()
         url = "%s/events/%s/" % (self.base_url, quote(str(event_id), safe=""))
         try:
-            response = self.session.get(url, headers=headers, timeout=self.timeout)
+            response = self.session.get(
+                url, headers=headers, timeout=self.timeout, verify=self.verify
+            )
         except requests.RequestException as exc:
             return GatewayResponse(
                 http_status=None,
@@ -182,7 +194,7 @@ class GatewayClient:
         """Call the public gateway health check endpoint."""
         url = "%s/health/" % self.base_url
         try:
-            response = self.session.get(url, timeout=self.timeout)
+            response = self.session.get(url, timeout=self.timeout, verify=self.verify)
         except requests.RequestException as exc:
             return GatewayResponse(
                 http_status=None,

@@ -6,6 +6,7 @@ default, and no token is ever written to the database, logs, or source.
 
 from __future__ import annotations
 
+import os
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -93,3 +94,10 @@ def outbox_batch_size() -> int:
 def auto_publish_enabled() -> bool:
     """Whether model saves should enqueue HR lifecycle events."""
     return bool(getattr(settings, "LIMBUS_AUTO_PUBLISH", True))
+
+
+def verify_ssl() -> bool:
+    """Whether TLS certificates are verified when calling the gateway."""
+    if os.environ.get("PYTHONHTTPSVERIFY") == "0":
+        return False
+    return bool(getattr(settings, "LIMBUS_VERIFY_SSL", True))

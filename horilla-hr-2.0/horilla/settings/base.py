@@ -475,6 +475,7 @@ LIMBUS_OUTBOX_BATCH_SIZE = env.int("LIMBUS_OUTBOX_BATCH_SIZE", default=50)
 # Set to False during a bulk import to keep every save out of the outbox;
 # run the limbus_sync_employees command afterwards to reconcile.
 LIMBUS_AUTO_PUBLISH = env.bool("LIMBUS_AUTO_PUBLISH", default=True)
+LIMBUS_VERIFY_SSL = env.bool("LIMBUS_VERIFY_SSL", default=True)
 
 SIDEBARS = [
     "employee",
