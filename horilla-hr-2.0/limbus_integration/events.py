@@ -26,8 +26,8 @@ from employee.models import EmployeeWorkInformation
 
 from .config import SOURCE_SYSTEM
 
-EVENT_TYPE_EMPLOYEE_UPSERT = "employee.upsert"
-EVENT_TYPE_EMPLOYEE_DEACTIVATE = "employee.deactivate"
+EVENT_TYPE_EMPLOYEE_UPSERT = "hr.employee.upsert"
+EVENT_TYPE_EMPLOYEE_DEACTIVATE = "hr.employee.deactivate"
 
 # The handoff lists the gateway's per-event endpoints as
 # /events/employee-upsert and /events/employee-deactivate. The OpenAPI
@@ -183,6 +183,7 @@ def build_employee_payload(employee, status: str | None = None) -> dict:
     return {
         "employee_id": external_id or None,
         "status": status,
+        "is_active": status != "inactive",
         "first_name": _text(getattr(employee, "employee_first_name", None)),
         "last_name": _text(getattr(employee, "employee_last_name", None)),
         "full_name": _text(employee.get_full_name()),

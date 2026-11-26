@@ -77,7 +77,7 @@ class CommandTests(EmployeeFixtureMixin, TestCase):
 
         result = _last_json(output)
         self.assertTrue(result["event_id"])
-        self.assertEqual(result["event_type"], "employee.deactivate")
+        self.assertEqual(result["event_type"], "hr.employee.deactivate")
         self.assertEqual(result["correlation_id"], "hr-employee-EMP-001")
 
     def test_process_outbox_prints_a_result_per_event(self):

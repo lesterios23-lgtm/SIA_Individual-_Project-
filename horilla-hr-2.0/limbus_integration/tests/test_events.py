@@ -39,6 +39,7 @@ class PayloadTests(EmployeeFixtureMixin, TestCase):
 
         self.assertEqual(payload["employee_id"], "EMP-001")
         self.assertEqual(payload["status"], "active")
+        self.assertIs(payload["is_active"], True)
         self.assertEqual(payload["department_id"], str(self.department.pk))
         self.assertEqual(payload["department"], "Manufacturing")
         self.assertEqual(payload["job_position_id"], str(self.job_position.pk))
@@ -54,6 +55,7 @@ class PayloadTests(EmployeeFixtureMixin, TestCase):
         employee = self.make_operator()
         payload = build_employee_payload(employee, status="inactive")
         self.assertEqual(payload["status"], "inactive")
+        self.assertIs(payload["is_active"], False)
 
     def test_missing_badge_id_raises(self):
         employee = make_employee(
@@ -78,7 +80,7 @@ class PayloadTests(EmployeeFixtureMixin, TestCase):
             },
         )
         self.assertEqual(envelope["source_system"], "hr")
-        self.assertEqual(envelope["event_type"], "employee.upsert")
+        self.assertEqual(envelope["event_type"], "hr.employee.upsert")
         self.assertEqual(envelope["correlation_id"], "hr-employee-EMP-001")
         self.assertEqual(envelope["external_id"], "EMP-001")
 

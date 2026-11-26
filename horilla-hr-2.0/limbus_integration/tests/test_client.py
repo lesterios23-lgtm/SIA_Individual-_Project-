@@ -59,7 +59,7 @@ class GatewayClientTests(SimpleTestCase):
         self.envelope = {
             "event_id": self.event_id,
             "source_system": "hr",
-            "event_type": "employee.upsert",
+            "event_type": "hr.employee.upsert",
             "occurred_at": "2026-11-20T10:30:00Z",
             "correlation_id": "hr-employee-EMP-001",
             "external_id": "EMP-001",
@@ -85,7 +85,7 @@ class GatewayClientTests(SimpleTestCase):
         self.assertFalse(response.retryable)
 
         url, kwargs = session.posts[0]
-        self.assertEqual(url, "http://gateway.test/api/v1/integration/events")
+        self.assertEqual(url, "http://gateway.test/api/v1/integration/events/")
         self.assertEqual(kwargs["json"], self.envelope)
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-token")
         self.assertEqual(kwargs["headers"]["Content-Type"], "application/json")
@@ -194,7 +194,7 @@ class GatewayClientTests(SimpleTestCase):
         url, kwargs = session.gets[0]
         self.assertEqual(
             url,
-            "http://gateway.test/api/v1/integration/events/%s" % self.event_id,
+            "http://gateway.test/api/v1/integration/events/%s/" % self.event_id,
         )
         self.assertEqual(kwargs["headers"]["X-Limbus-System"], "hr")
         self.assertNotIn("Idempotency-Key", kwargs["headers"])

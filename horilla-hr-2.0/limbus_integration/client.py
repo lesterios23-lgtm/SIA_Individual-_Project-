@@ -147,7 +147,7 @@ class GatewayClient:
         event_id = str(envelope["event_id"])
         headers = self._headers()
         headers["Idempotency-Key"] = event_id
-        url = "%s/events" % self.base_url
+        url = "%s/events/" % self.base_url
         try:
             response = self.session.post(
                 url, json=envelope, headers=headers, timeout=self.timeout
@@ -165,7 +165,7 @@ class GatewayClient:
     def get_event(self, event_id: str) -> GatewayResponse:
         """Read the gateway's status for an event (documented GET)."""
         headers = self._headers()
-        url = "%s/events/%s" % (self.base_url, quote(str(event_id), safe=""))
+        url = "%s/events/%s/" % (self.base_url, quote(str(event_id), safe=""))
         try:
             response = self.session.get(url, headers=headers, timeout=self.timeout)
         except requests.RequestException as exc:
@@ -177,6 +177,21 @@ class GatewayClient:
                 transport_error=exc.__class__.__name__,
             )
         return _classify(response, expected_event_id=str(event_id))
+
+    def health(self) -> GatewayResponse:
+        """Call the public gateway health check endpoint."""
+        url = "%s/health/" % self.base_url
+        try:
+            response = self.session.get(url, timeout=self.timeout)
+        except requests.RequestException as exc:
+            return GatewayResponse(
+                http_status=None,
+                error_code="transport_error",
+                error_message=str(exc) or exc.__class__.__name__,
+                retryable=True,
+                transport_error=exc.__class__.__name__,
+            )
+        return _classify(response)
 
 
 def response_body_text(response: GatewayResponse) -> str | None:

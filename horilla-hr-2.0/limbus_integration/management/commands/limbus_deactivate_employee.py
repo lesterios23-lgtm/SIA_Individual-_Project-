@@ -6,7 +6,10 @@ import uuid
 
 from django.core.management.base import BaseCommand, CommandError
 
-from limbus_integration.events import default_correlation_id
+from limbus_integration.events import (
+    EVENT_TYPE_EMPLOYEE_DEACTIVATE,
+    default_correlation_id,
+)
 from limbus_integration.outbox import enqueue_deactivate, event_result
 
 from ._util import resolve_employee, write_json
@@ -45,7 +48,7 @@ class Command(BaseCommand):
                     "event_id": None,
                     "correlation_id": "limbus-deactivate-%s" % uuid.uuid4(),
                     "external_id": str(options["employee"]),
-                    "event_type": "employee.deactivate",
+                    "event_type": EVENT_TYPE_EMPLOYEE_DEACTIVATE,
                     "status": "not_found",
                     "error": "no employee matches this ID or PK",
                 },
@@ -60,7 +63,7 @@ class Command(BaseCommand):
                     "correlation_id": options["correlation_id"]
                     or default_correlation_id(employee),
                     "external_id": employee.badge_id or "",
-                    "event_type": "employee.deactivate",
+                    "event_type": EVENT_TYPE_EMPLOYEE_DEACTIVATE,
                     "status": "refused",
                     "error": (
                         "employee is still active in HR; deactivate locally "
