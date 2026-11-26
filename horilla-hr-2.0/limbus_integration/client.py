@@ -140,9 +140,11 @@ class GatewayClient:
         self.session = session or requests.Session()
 
     def _headers(self) -> dict:
-        # The contract requires all four headers on every request.
+        # InvenTree DRF API tokens ("inv-...") require the "Token" scheme;
+        # standard OAuth/JWT tokens use "Bearer".
+        scheme = "Token" if self._token.startswith("inv-") else "Bearer"
         return {
-            "Authorization": "Bearer %s" % self._token,
+            "Authorization": "%s %s" % (scheme, self._token),
             "Content-Type": "application/json",
             "Accept": "application/json",
             "X-Limbus-System": SOURCE_SYSTEM,

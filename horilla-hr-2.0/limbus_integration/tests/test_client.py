@@ -198,3 +198,17 @@ class GatewayClientTests(SimpleTestCase):
         )
         self.assertEqual(kwargs["headers"]["X-Limbus-System"], "hr")
         self.assertNotIn("Idempotency-Key", kwargs["headers"])
+
+    def test_inventree_token_uses_token_auth_scheme(self):
+        session = FakeSession(
+            [FakeResponse(202, {"event_id": self.event_id, "status": "received"})]
+        )
+        client = GatewayClient(
+            base_url="http://gateway.test/api/v1/integration",
+            token="inv-2-sampletoken",
+            timeout=5,
+            session=session,
+        )
+        client.post_event(self.envelope)
+        _, kwargs = session.posts[0]
+        self.assertEqual(kwargs["headers"]["Authorization"], "Token inv-2-sampletoken")
